@@ -1,27 +1,57 @@
 # Reservas directas: Next.js + Hospitable + Square
 
-Web de reservas directas para una propiedad. El calendario, los precios y
-las reservas viven en Hospitable, así que todo queda sincronizado con
-Airbnb y Vrbo. El cobro lo hace Square, con el formulario de tarjeta
-incrustado en la página (Web Payments SDK).
+Web de reservas directas para una propiedad. La disponibilidad y las
+reservas viven en Hospitable, así que todo queda sincronizado con Airbnb y
+Vrbo. Los precios, tarifas y descuentos se manejan desde el panel `/admin`.
+El cobro lo hace Square, con el formulario de tarjeta incrustado en la
+página (Web Payments SDK). Los huéspedes crean una cuenta para reservar y
+ven sus viajes en `/account`.
 
 ## Cómo funciona
 
 Todo pasa en una sola petición a `/api/book`:
 
-1. El servidor recalcula el precio con datos frescos de Hospitable. Si el total cambió desde que el huésped lo vio, no cobra nada y le muestra el nuevo total.
+0. El huésped tiene que haber iniciado sesión.
+1. El servidor recalcula el precio con la disponibilidad fresca de Hospitable y las reglas de `/admin`. Si el total cambió desde que el huésped lo vio, no cobra nada y le muestra el nuevo total.
 2. Square **autoriza** la tarjeta sin cobrarla (`autocomplete: false`).
 3. Se crea la reserva manual en Hospitable.
 4. Si Hospitable la acepta, se **captura** el pago y las fechas se bloquean en Airbnb y Vrbo.
 
 Si algo falla después del paso 2 (fechas tomadas por otro canal, error de Hospitable), la autorización se anula y el huésped no paga nada. Si el servidor se cae a la mitad, Square anula la autorización por su cuenta a los 30 minutos (`delayAction: CANCEL`).
 
-A diferencia de la versión con Stripe, no hace falta webhook.
+Al confirmarse, la reserva también se guarda en la base de datos: aparece en la cuenta del huésped y en el panel de admin.
+
+## Precios y panel de admin
+
+Entra a `/admin` con la contraseña `ADMIN_PASSWORD`. Desde ahí cambias, sin tocar código:
+
+- **Precio por noche:** el de entre semana, el porcentaje de aumento y qué noches cuentan como fin de semana (por defecto viernes y sábado: $300 y $411).
+- **Tarifas:** limpieza ($175) y mascota ($20 por estadía, sin importar cuántas mascotas).
+- **Descuentos:** semanal (10% desde 7 noches), mensual (18% desde 28 noches) y el de reserva directa (5%), que se activa y desactiva con un interruptor.
+- **Límites:** máximo de huéspedes (10, sin contar bebés), de mascotas (2) y de noches.
+- **Impuesto:** mientras esté vacío, **la reserva en línea está cerrada**. Escribe 0 solo si de verdad no cobras impuestos.
+
+Cómo se calcula el total:
+
+1. Se suman las noches, a precio normal o de fin de semana.
+2. Se aplica el descuento semanal o el mensual. No se suman: aplica el más largo.
+3. Sobre eso se aplica el descuento por reserva directa.
+4. Se agregan la limpieza y la tarifa de mascota. Los descuentos no tocan las tarifas.
+5. El impuesto se calcula sobre noches más tarifas.
+
+Los precios por noche que tengas en Hospitable ya **no** se usan en la web; de Hospitable solo se toman la disponibilidad, el mínimo de noches y los días cerrados para entrar o salir. Los cambios del panel tardan como máximo 15 segundos en verse en la web.
+
+## Cuentas de huéspedes
+
+Los huéspedes crean su cuenta con nombre, teléfono, email y contraseña, desde el mismo panel de reserva o en `/account`. Las contraseñas se guardan cifradas (scrypt) y la sesión dura 30 días. La sesión de admin es independiente y dura 12 horas.
+
+Todavía no hay recuperación de contraseña, porque necesita un servicio de envío de emails (por ejemplo Resend). Mientras tanto, si alguien olvida la suya, puedes borrar su cuenta en la base de datos para que la cree de nuevo, siempre que no tenga reservas.
 
 ## Requisitos
 
 - Plan pago de Hospitable (Host, Professional o Mogul). El plan Essentials no tiene acceso a la API.
 - Cuenta de vendedor de Square **aprobada** para pagos en línea y una app en developer.squareup.com.
+- Una base de datos Postgres. En Vercel, la de Neon (plan gratis) es la más sencilla.
 - Node 20 o superior.
 
 ## Configuración
@@ -40,9 +70,11 @@ curl -s -H "Authorization: Bearer TU_TOKEN" \
 
 **Square:** en developer.squareup.com crea una aplicación. En *Credentials* copia el Application ID y el Access token; en *Locations*, el Location ID. Empieza con las credenciales de **Sandbox** y `NEXT_PUBLIC_SQUARE_ENVIRONMENT=sandbox`. El Location ID tiene que ser el mismo en el formulario y en el cobro; si no coinciden, Square rechaza los pagos con verificación.
 
-**Precios:** se usan los precios por noche del calendario de Hospitable. Si allí tienes markups por plataforma, la web muestra el precio base, más barato que en Airbnb.
+**Base de datos:** en Vercel ve a *Storage → Create Database → Neon* y conéctala al proyecto; `DATABASE_URL` se agrega sola. Las tablas se crean automáticamente la primera vez que se usan. En local sirve cualquier Postgres 13 o superior.
 
-**Impuestos (`TAX_RATE_PERCENT`):** pon el porcentaje total que corresponde a tu propiedad (sales tax de Florida, surtax del condado y Tourist Development Tax). Confírmalo con el Florida Department of Revenue y el Hillsborough County Tax Collector. En estas reservas no hay Airbnb que recaude por ti, así que tú declaras y pagas esos impuestos.
+**Seguridad:** genera `SESSION_SECRET` con `openssl rand -base64 48` y elige una `ADMIN_PASSWORD` larga. Si cambias `SESSION_SECRET`, se cierran todas las sesiones.
+
+**Impuestos:** en `/admin`, pon el porcentaje total que corresponde a tu propiedad (sales tax de Florida, surtax del condado y Tourist Development Tax). Confírmalo con el Florida Department of Revenue y el Hillsborough County Tax Collector. En estas reservas no hay Airbnb que recaude por ti, así que tú declaras y pagas esos impuestos.
 
 ## Probar
 
@@ -59,7 +91,9 @@ Lista de pruebas antes de publicar:
 - [ ] Reservar 2 noches libres. La reserva aparece en Hospitable, el pago sale *Completed* en el Sandbox de Square y las fechas se bloquean en Airbnb.
 - [ ] Conflicto: llena el formulario, bloquea esas fechas en Hospitable y luego paga. Debe salir el aviso de fechas tomadas y el pago debe quedar *Canceled* en Square.
 - [ ] Tarjeta rechazada (número de prueba de rechazo). Sale un mensaje claro y no se crea reserva.
-- [ ] Mínimo de noches, días cerrados para check-in y límite de huéspedes.
+- [ ] Mínimo de noches, días cerrados para check-in, límite de huéspedes y de mascotas.
+- [ ] En `/admin` apaga el descuento directo: debe desaparecer del panel de reserva y del total.
+- [ ] Crear cuenta, cerrar sesión y volver a entrar. La reserva de prueba debe aparecer en `/account`.
 
 ## Fotos y textos de la propiedad
 
@@ -91,6 +125,9 @@ Vercel da gratis un subdominio con HTTPS, por ejemplo `elmaresort.vercel.app` (e
 | --- | --- |
 | `lib/booking.ts` | Autorizar, reservar en Hospitable y capturar o anular el pago |
 | `lib/quote.ts` | Reglas (disponibilidad, mínimo de noches, huéspedes) y cálculo del total |
+| `lib/settings.ts` | Valores por defecto y validación de la configuración de `/admin` |
+| `lib/auth.ts`, `lib/users.ts` | Cuentas, contraseñas, sesiones y reservas guardadas |
+| `components/Admin.tsx` | Panel de configuración |
 | `lib/square.ts` | Cliente de Square y mensajes de tarjeta rechazada |
 | `components/SquareCard.tsx` | Formulario de tarjeta de Square |
 | `components/BookingWidget.tsx` | Calendario, resumen y pago |

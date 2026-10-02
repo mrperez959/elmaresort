@@ -23,7 +23,8 @@ export function hospitable(): HospitableClient {
 // Short in-memory cache so page visits don't hammer the API. Anything that
 // takes money (quote for checkout, finalizing) asks for fresh data instead.
 const CACHE_MS = 60_000;
-const cache = new Map<string, { at: number; days: Day[] }>();
+const shared = globalThis as unknown as { __elmaCalendar?: Map<string, { at: number; days: Day[] }> };
+const cache = (shared.__elmaCalendar ??= new Map());
 
 export function clearCalendarCache() {
   cache.clear();

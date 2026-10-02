@@ -4,11 +4,13 @@ import { square, cardDeclineMessage } from "./square";
 import { clearCalendarCache, hospitable } from "./hospitable";
 import { env } from "./env";
 import { quoteStay, QuoteError } from "./quote";
-import type { BookResult, GuestDetails, StayRequest } from "./types";
+import { insertBooking } from "./users";
+import type { BookResult, PublicUser, StayRequest } from "./types";
 
 type BookInput = {
   stay: StayRequest;
-  guest: GuestDetails;
+  /** the signed-in guest */
+  guest: PublicUser;
   /** single-use card token from the Square Web Payments SDK */
   sourceId: string;
   /** unique per payment attempt, generated in the browser */
@@ -100,11 +102,12 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
         email: guest.email,
         phone: guest.phone || undefined,
       },
-      guests: { adults: quote.adults, children: quote.children, infants: quote.infants },
+      guests: { adults: quote.adults, children: quote.children, infants: quote.infants, pets: quote.pets },
       financials: {
         currency: "USD",
         accommodation: quote.accommodation,
         cleaningFee: quote.cleaningFee,
+        petFee: quote.petFee || undefined,
         // Florida sales tax + county taxes you collect and remit yourself
         passThroughTaxes: quote.tax,
       },
@@ -125,6 +128,13 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     throw err;
   }
 
+  // Save it for the guest's account page and the admin panel. A failure here
+  // doesn't undo the stay: it's already in Hospitable and paid.
+  const record = () =>
+    insertBooking({ userId: guest.id, hospitableId: reservationId, code, squarePaymentId: paymentId, quote }).catch(
+      (err) => console.error(`[booking] paid booking ${code} could not be saved to the database`, err),
+    );
+
   // 4. Capture
   try {
     await square().payments.complete({ paymentId });
@@ -133,6 +143,7 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     const check = await square().payments.get({ paymentId }).catch(() => null);
     if (check?.payment?.status === "COMPLETED") {
       clearCalendarCache();
+      await record();
       return { state: "confirmed", code, quote, firstName: guest.firstName };
     }
     console.error(`[booking] capture failed for ${paymentId}; cancelling reservation ${reservationId}`, err);
@@ -145,5 +156,6 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
   }
 
   clearCalendarCache();
+  await record();
   return { state: "confirmed", code, quote, firstName: guest.firstName };
 }

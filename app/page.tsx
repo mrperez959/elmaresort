@@ -1,25 +1,19 @@
 import { Suspense } from "react";
 import { BookingWidget } from "@/components/BookingWidget";
 import { Gallery } from "@/components/Gallery";
+import { SiteHeader } from "@/components/SiteHeader";
 import { AMENITIES, PHOTOS } from "@/lib/property";
+import { getSettings, toPublicSettings } from "@/lib/settings";
+import { currentUser } from "@/lib/auth";
 
-export default function Home() {
-  const name = process.env.NEXT_PUBLIC_PROPERTY_NAME ?? "Vacation rental";
-  const location = process.env.NEXT_PUBLIC_PROPERTY_LOCATION ?? "";
-  const tagline = process.env.NEXT_PUBLIC_PROPERTY_TAGLINE ?? "";
-  const maxGuests = Number(process.env.NEXT_PUBLIC_MAX_GUESTS ?? 6) || 6;
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const [settings, user] = await Promise.all([getSettings(), currentUser()]);
 
   return (
     <main className="page">
-      <header className="masthead">
-        <h1>{name}</h1>
-        <p className="place">
-          {location}
-          {location && tagline ? <br /> : null}
-          {tagline}
-        </p>
-      </header>
-
+      <SiteHeader user={user} />
       <Gallery photos={PHOTOS} />
 
       <section className="amenities" aria-labelledby="amenities-heading">
@@ -36,7 +30,7 @@ export default function Home() {
 
       <section id="book" aria-label="Book your stay">
         <Suspense fallback={<p className="notice">Loading…</p>}>
-          <BookingWidget maxGuests={maxGuests} />
+          <BookingWidget settings={toPublicSettings(settings)} user={user} />
         </Suspense>
       </section>
     </main>

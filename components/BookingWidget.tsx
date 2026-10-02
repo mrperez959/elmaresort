@@ -4,10 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Month } from "./Calendar";
 import { SquareCard, type SquareCardHandle } from "./SquareCard";
-import type { BookResult, GuestDetails, PublicDay, Quote } from "@/lib/types";
+import { AuthPanel } from "./AuthPanel";
+import type { BookResult, PublicDay, PublicSettings, PublicUser, Quote } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
 
-type Props = { maxGuests: number };
+type Props = { settings: PublicSettings; user: PublicUser | null };
 
 function addDays(iso: string, n: number) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -15,14 +16,7 @@ function addDays(iso: string, n: number) {
   return d.toISOString().slice(0, 10);
 }
 
-function Stepper({
-  label,
-  hint,
-  value,
-  min,
-  max,
-  onChange,
-}: {
+function Stepper(props: {
   label: string;
   hint?: string;
   value: number;
@@ -30,6 +24,7 @@ function Stepper({
   max: number;
   onChange: (n: number) => void;
 }) {
+  const { label, hint, value, min, max, onChange } = props;
   return (
     <div className="stepper">
       <div>
@@ -37,21 +32,11 @@ function Stepper({
         {hint && <div className="stepper-hint">{hint}</div>}
       </div>
       <div className="stepper-controls">
-        <button
-          type="button"
-          aria-label={`Fewer ${label.toLowerCase()}`}
-          disabled={value <= min}
-          onClick={() => onChange(value - 1)}
-        >
+        <button type="button" aria-label={`Fewer ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(value - 1)}>
           −
         </button>
         <span aria-live="polite">{value}</span>
-        <button
-          type="button"
-          aria-label={`More ${label.toLowerCase()}`}
-          disabled={value >= max}
-          onClick={() => onChange(value + 1)}
-        >
+        <button type="button" aria-label={`More ${label.toLowerCase()}`} disabled={value >= max} onClick={() => onChange(value + 1)}>
           +
         </button>
       </div>
@@ -59,7 +44,41 @@ function Stepper({
   );
 }
 
-export function BookingWidget({ maxGuests }: Props) {
+function Breakdown({ quote }: { quote: Quote }) {
+  const rows: Array<[string, number]> = [];
+  if (quote.weekdayNights) {
+    rows.push([`${money(quote.weekdayRate)} × ${quote.weekdayNights} ${quote.weekdayNights === 1 ? "night" : "nights"}`, quote.weekdayNights * quote.weekdayRate]);
+  }
+  if (quote.weekendNights) {
+    rows.push([`${money(quote.weekendRate)} × ${quote.weekendNights} weekend ${quote.weekendNights === 1 ? "night" : "nights"}`, quote.weekendNights * quote.weekendRate]);
+  }
+  if (quote.lengthDiscount) rows.push([`${quote.lengthDiscount.label} (${quote.lengthDiscount.percent}%)`, -quote.lengthDiscount.amount]);
+  if (quote.directDiscount) rows.push([`Direct booking discount (${quote.directDiscount.percent}%)`, -quote.directDiscount.amount]);
+  if (quote.cleaningFee) rows.push(["Cleaning fee", quote.cleaningFee]);
+  if (quote.petFee) rows.push(["Pet fee", quote.petFee]);
+  if (quote.tax) rows.push(["Taxes", quote.tax]);
+
+  return (
+    <table className="breakdown">
+      <tbody>
+        {rows.map(([label, amount]) => (
+          <tr key={label} className={amount < 0 ? "discount" : undefined}>
+            <th scope="row">{label}</th>
+            <td>{amount < 0 ? `−${money(-amount)}` : money(amount)}</td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row">Total</th>
+          <td>{money(quote.total)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+export function BookingWidget({ settings, user }: Props) {
   const params = useSearchParams();
 
   const [days, setDays] = useState<PublicDay[] | null>(null);
@@ -69,19 +88,19 @@ export function BookingWidget({ maxGuests }: Props) {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
+  const [pets, setPets] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
 
-  const [guest, setGuest] = useState<GuestDetails>({ firstName: "", lastName: "", email: "", phone: "" });
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [booked, setBooked] = useState<Extract<BookResult, { state: "confirmed" }> | null>(null);
   const cardRef = useRef<SquareCardHandle>(null);
 
-  useEffect(() => {
+  const loadDays = useCallback(() => {
     fetch("/api/availability")
       .then(async (r) => {
         const body = await r.json();
@@ -90,6 +109,7 @@ export function BookingWidget({ maxGuests }: Props) {
       })
       .catch((e: Error) => setLoadError(e.message));
   }, []);
+  useEffect(loadDays, [loadDays]);
 
   const dayMap = useMemo(() => new Map((days ?? []).map((d) => [d.date, d])), [days]);
   const today = days?.[0]?.date ?? new Date().toISOString().slice(0, 10);
@@ -105,9 +125,7 @@ export function BookingWidget({ maxGuests }: Props) {
 
   const nightsFree = useCallback(
     (from: string, to: string) => {
-      for (let d = from; d < to; d = addDays(d, 1)) {
-        if (!dayMap.get(d)?.available) return false;
-      }
+      for (let d = from; d < to; d = addDays(d, 1)) if (!dayMap.get(d)?.available) return false;
       return true;
     },
     [dayMap],
@@ -123,7 +141,6 @@ export function BookingWidget({ maxGuests }: Props) {
   );
 
   const choosingCheckOut = Boolean(checkIn && !checkOut);
-
   const isSelectable = useCallback(
     (date: string) => (choosingCheckOut ? canCheckOut(date) || canCheckIn(date) : canCheckIn(date)),
     [choosingCheckOut, canCheckIn, canCheckOut],
@@ -141,22 +158,18 @@ export function BookingWidget({ maxGuests }: Props) {
     else if (canCheckIn(date)) setCheckIn(date);
   }
 
-  function clearDates() {
-    setCheckIn(null);
-    setCheckOut(null);
-  }
-
   // Price the stay whenever dates or guests change.
   useEffect(() => {
     setQuote(null);
     setQuoteError(null);
+    setPayError(null);
     if (!checkIn || !checkOut) return;
     const ctrl = new AbortController();
     setQuoting(true);
     fetch("/api/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkIn, checkOut, adults, children, infants }),
+      body: JSON.stringify({ checkIn, checkOut, adults, children, infants, pets }),
       signal: ctrl.signal,
     })
       .then(async (r) => {
@@ -169,19 +182,19 @@ export function BookingWidget({ maxGuests }: Props) {
       })
       .finally(() => setQuoting(false));
     return () => ctrl.abort();
-  }, [checkIn, checkOut, adults, children, infants]);
+  }, [checkIn, checkOut, adults, children, infants, pets]);
 
   async function pay(e: React.FormEvent) {
     e.preventDefault();
-    if (!quote || !cardRef.current) return;
+    if (!quote || !cardRef.current || !user) return;
     setPaying(true);
     setPayError(null);
     try {
       const sourceId = await cardRef.current.tokenize(quote.total, {
-        givenName: guest.firstName,
-        familyName: guest.lastName,
-        email: guest.email,
-        phone: guest.phone || undefined,
+        givenName: user.firstName,
+        familyName: user.lastName,
+        email: user.email,
+        phone: user.phone || undefined,
       });
       const r = await fetch("/api/book", {
         method: "POST",
@@ -192,7 +205,7 @@ export function BookingWidget({ maxGuests }: Props) {
           adults,
           children,
           infants,
-          guest,
+          pets,
           sourceId,
           idempotencyKey: crypto.randomUUID(),
           expectedTotal: quote.total,
@@ -205,13 +218,7 @@ export function BookingWidget({ maxGuests }: Props) {
         return;
       }
       if (result.state === "price_changed") setQuote(result.quote);
-      if (result.state === "released") {
-        // Reload availability so the taken nights show as booked.
-        fetch("/api/availability")
-          .then((res) => res.json())
-          .then((b) => b.days && setDays(b.days))
-          .catch(() => undefined);
-      }
+      if (result.state === "released") loadDays();
       setPayError(result.message);
     } catch (err) {
       setPayError((err as Error).message || "Payment couldn't be completed. Try again.");
@@ -230,12 +237,14 @@ export function BookingWidget({ maxGuests }: Props) {
         <p>
           Paid {money(booked.quote.total)}. Confirmation code <strong>{booked.code}</strong>.
         </p>
-        <p>Keep this code for your records. Check-in details will be sent to {guest.email} before your arrival.</p>
+        <p>
+          Your trip is saved in <a href="/account">your account</a>. Check-in details will be sent to {user?.email}{" "}
+          before your arrival.
+        </p>
       </section>
     );
   }
 
-  // Months to show: the current page of two.
   const base = new Date(`${today}T00:00:00Z`);
   const months = [0, 1].map((i) => {
     const d = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + monthOffset + i, 1));
@@ -248,7 +257,12 @@ export function BookingWidget({ maxGuests }: Props) {
       ? `Stays from ${longDate(checkIn)} need at least ${dayMap.get(checkIn)!.minStay} nights.`
       : null;
 
-  const childrenMax = Math.max(0, maxGuests - adults);
+  const perks: string[] = [];
+  if (settings.directDiscountEnabled && settings.directDiscountPercent > 0) {
+    perks.push(`${settings.directDiscountPercent}% off for booking here`);
+  }
+  if (settings.weeklyDiscountPercent > 0) perks.push(`${settings.weeklyDiscountPercent}% off ${settings.weeklyMinNights}+ nights`);
+  if (settings.monthlyDiscountPercent > 0) perks.push(`${settings.monthlyDiscountPercent}% off ${settings.monthlyMinNights}+ nights`);
 
   return (
     <div className="booking">
@@ -258,20 +272,10 @@ export function BookingWidget({ maxGuests }: Props) {
             {!checkIn ? "Pick your check-in day" : !checkOut ? "Now pick your check-out day" : "Your dates"}
           </h2>
           <div className="calendar-nav">
-            <button
-              type="button"
-              aria-label="Previous months"
-              disabled={monthOffset === 0}
-              onClick={() => setMonthOffset((m) => Math.max(0, m - 2))}
-            >
+            <button type="button" aria-label="Previous months" disabled={monthOffset === 0} onClick={() => setMonthOffset((m) => Math.max(0, m - 2))}>
               ‹
             </button>
-            <button
-              type="button"
-              aria-label="Next months"
-              disabled={lastShown >= lastDate}
-              onClick={() => setMonthOffset((m) => m + 2)}
-            >
+            <button type="button" aria-label="Next months" disabled={lastShown >= lastDate} onClick={() => setMonthOffset((m) => m + 2)}>
               ›
             </button>
           </div>
@@ -313,6 +317,14 @@ export function BookingWidget({ maxGuests }: Props) {
       </section>
 
       <aside className="summary" aria-label="Your booking">
+        {perks.length > 0 && (
+          <ul className="perks">
+            {perks.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        )}
+
         <dl className="dates">
           <div>
             <dt>Check-in</dt>
@@ -324,24 +336,36 @@ export function BookingWidget({ maxGuests }: Props) {
           </div>
         </dl>
         {checkIn && (
-          <button type="button" className="link" onClick={clearDates}>
+          <button
+            type="button"
+            className="link"
+            onClick={() => {
+              setCheckIn(null);
+              setCheckOut(null);
+            }}
+          >
             Clear dates
           </button>
         )}
 
         <div className="guests">
-          <Stepper label="Adults" value={adults} min={1} max={maxGuests - children} onChange={setAdults} />
-          <Stepper
-            label="Children"
-            hint="Ages 2–12"
-            value={children}
-            min={0}
-            max={childrenMax}
-            onChange={setChildren}
-          />
+          <Stepper label="Adults" value={adults} min={1} max={settings.maxGuests - children} onChange={setAdults} />
+          <Stepper label="Children" hint="Ages 2–12" value={children} min={0} max={Math.max(0, settings.maxGuests - adults)} onChange={setChildren} />
           <Stepper label="Infants" hint="Under 2" value={infants} min={0} max={5} onChange={setInfants} />
+          {settings.maxPets > 0 && (
+            <Stepper
+              label="Pets"
+              hint={`${money(settings.petFee)} per stay`}
+              value={pets}
+              min={0}
+              max={settings.maxPets}
+              onChange={setPets}
+            />
+          )}
         </div>
+        <p className="fine">Up to {settings.maxGuests} guests, not counting infants.</p>
 
+        {!settings.bookingOpen && <p className="notice">Online booking opens soon.</p>}
         {quoting && <p className="notice">Calculating your total…</p>}
         {quoteError && (
           <p className="notice error" role="alert">
@@ -351,89 +375,34 @@ export function BookingWidget({ maxGuests }: Props) {
 
         {quote && (
           <>
-            <table className="breakdown">
-              <tbody>
-                <tr>
-                  <th scope="row">
-                    {quote.nights} {quote.nights === 1 ? "night" : "nights"}
-                  </th>
-                  <td>{money(quote.accommodation)}</td>
-                </tr>
-                {quote.cleaningFee > 0 && (
-                  <tr>
-                    <th scope="row">Cleaning fee</th>
-                    <td>{money(quote.cleaningFee)}</td>
-                  </tr>
-                )}
-                {quote.tax > 0 && (
-                  <tr>
-                    <th scope="row">Taxes</th>
-                    <td>{money(quote.tax)}</td>
-                  </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">Total</th>
-                  <td>{money(quote.total)}</td>
-                </tr>
-              </tfoot>
-            </table>
-
-            <form className="guest-form" onSubmit={pay}>
-              <div className="row">
-                <label>
-                  First name
-                  <input
-                    required
-                    autoComplete="given-name"
-                    value={guest.firstName}
-                    onChange={(e) => setGuest({ ...guest, firstName: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Last name
-                  <input
-                    required
-                    autoComplete="family-name"
-                    value={guest.lastName}
-                    onChange={(e) => setGuest({ ...guest, lastName: e.target.value })}
-                  />
-                </label>
-              </div>
-              <label>
-                Email
-                <input
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={guest.email}
-                  onChange={(e) => setGuest({ ...guest, email: e.target.value })}
-                />
-              </label>
-              <label>
-                Phone
-                <input
-                  type="tel"
-                  autoComplete="tel"
-                  value={guest.phone}
-                  onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
-                />
-              </label>
-              <SquareCard ref={cardRef} />
-              {payError && (
-                <p className="notice error" role="alert">
-                  {payError}
+            <Breakdown quote={quote} />
+            {!user ? (
+              <AuthPanel intro="Create an account or sign in to book. Your trips will be saved there." />
+            ) : (
+              <form className="guest-form" onSubmit={pay}>
+                <p className="booking-as">
+                  Booking as{" "}
+                  <strong>
+                    {user.firstName} {user.lastName}
+                  </strong>
+                  <br />
+                  {user.email}
                 </p>
-              )}
-              <button className="pay" type="submit" disabled={paying}>
-                {paying ? "Confirming your dates…" : `Pay ${money(quote.total)}`}
-              </button>
-              <p className="fine">
-                Your card is held, not charged, until your dates are confirmed. If they were taken in the
-                meantime, the hold is released.
-              </p>
-            </form>
+                <SquareCard ref={cardRef} />
+                {payError && (
+                  <p className="notice error" role="alert">
+                    {payError}
+                  </p>
+                )}
+                <button className="pay" type="submit" disabled={paying}>
+                  {paying ? "Confirming your dates…" : `Pay ${money(quote.total)}`}
+                </button>
+                <p className="fine">
+                  Your card is held, not charged, until your dates are confirmed. If they were taken in the meantime,
+                  the hold is released.
+                </p>
+              </form>
+            )}
           </>
         )}
       </aside>
