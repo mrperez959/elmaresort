@@ -33,13 +33,27 @@ export const PHOTOS: Photo[] = [
   p("aerial", "Aerial view of the house, deck and waterfront", 1432, 1098),
 ];
 
+export type AmenityIcon =
+  | "water"
+  | "hot-tub"
+  | "outdoor"
+  | "fire"
+  | "games"
+  | "bed"
+  | "kitchen"
+  | "laundry"
+  | "guests"
+  | "pets";
+
 // Only list what guests can actually use. Verify each line before publishing.
-export const AMENITIES: Array<{ title: string; detail: string }> = [
-  { title: "On the water", detail: "Private dock on the canal and kayaks for guests, including a clear-bottom one." },
-  { title: "Hot tub", detail: "On a raised deck with canal views, plus bar seating along the side." },
-  { title: "Outdoor living", detail: "Deck loungers, wicker seating, a fire pit, gas grill and picnic table." },
-  { title: "Game room", detail: "Air hockey, shuffleboard, an arcade cabinet and a TV." },
-  { title: "Bedrooms", detail: "King primary suite with a sitting area and walk-in shower, plus two queen bedrooms." },
-  { title: "Kitchen", detail: "Full kitchen with island seating, coffee station and a dining table." },
-  { title: "Laundry", detail: "Washer and dryer inside the house." },
+// The guests and pets lines are added on the page from the /admin settings.
+export const AMENITIES: Array<{ icon: AmenityIcon; title: string; detail: string }> = [
+  { icon: "water", title: "On the water", detail: "Private dock on the canal and kayaks for guests, including a clear-bottom one." },
+  { icon: "hot-tub", title: "Hot tub", detail: "On a raised deck with canal views, plus bar seating along the side." },
+  { icon: "outdoor", title: "Outdoor living", detail: "Deck loungers, wicker seating, a gas grill and a picnic table." },
+  { icon: "fire", title: "Fire pit", detail: "Stone fire pit with Adirondack chairs, steps from the water." },
+  { icon: "games", title: "Game room", detail: "Air hockey, shuffleboard, an arcade cabinet and a TV." },
+  { icon: "bed", title: "Bedrooms", detail: "King primary suite with a sitting area and walk-in shower, plus two queen bedrooms." },
+  { icon: "kitchen", title: "Kitchen", detail: "Full kitchen with island seating, coffee station and a dining table." },
+  { icon: "laundry", title: "Laundry", detail: "Washer and dryer inside the house." },
 ];

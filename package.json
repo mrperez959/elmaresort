@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "hospitable": "0.7.3",
+    "lucide-react": "^1.50.0",
     "next": "16.3.8",
     "pg": "^8.23.1",
     "react": "^19.2.0",

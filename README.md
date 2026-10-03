@@ -101,6 +101,21 @@ Las fotos están en `public/photos/` en WebP, en dos tamaños (`nombre.webp` de 
 
 Para agregar una foto nueva, conviértela con cualquier herramienta a WebP en esos dos tamaños, ponla en `public/photos/` y agrégala a la lista.
 
+## Reseñas
+
+La sección "What guests say" muestra las reseñas reales de tu propiedad en todas las plataformas conectadas a Hospitable (Airbnb, Vrbo, etc.), sin escribir nada a mano:
+
+- **Promedio y total:** se calculan con **todas** las reseñas.
+- **Tarjetas:** muestran las más recientes que tengan texto, sin filtrar por estrellas. Mostrar solo las buenas y presentarlas como si fueran todas va contra la regla de la FTC sobre reseñas de consumidores.
+- **Nombres:** se muestra el nombre y la inicial del apellido.
+- **Actualización:** se refrescan cada hora.
+
+Si Hospitable no responde o todavía no hay reseñas, la sección no aparece.
+
+## Iconos
+
+Las amenidades usan iconos de [Lucide](https://lucide.dev). Cada amenidad en `lib/property.ts` tiene un `icon`, y la correspondencia con el icono está en `components/Amenities.tsx`. Las líneas "Sleeps 10" y "Pet friendly" salen de la configuración de `/admin`.
+
 ## Dominio de prueba
 
 Vercel da gratis un subdominio con HTTPS, por ejemplo `elmaresort.vercel.app` (el nombre se elige en *Settings → Domains*). Square funciona ahí en Sandbox sin configurar nada más. Cuando compres el dominio definitivo, se agrega en esa misma pantalla.
