@@ -53,13 +53,24 @@ export const SquareCard = forwardRef<SquareCardHandle>(function SquareCard(_prop
   const container = useRef<HTMLDivElement>(null);
   const card = useRef<SquareCardInstance | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [detail, setDetail] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     let instance: SquareCardInstance | null = null;
     (async () => {
       try {
-        if (!APP_ID || !LOCATION_ID) throw new Error("Square isn't configured.");
+        if (!APP_ID) throw new Error("NEXT_PUBLIC_SQUARE_APPLICATION_ID is missing (add it in Vercel and redeploy).");
+        if (!LOCATION_ID) throw new Error("NEXT_PUBLIC_SQUARE_LOCATION_ID is missing (add it in Vercel and redeploy).");
+        const sandboxId = APP_ID.startsWith("sandbox-");
+        const sandboxEnv = process.env.NEXT_PUBLIC_SQUARE_ENVIRONMENT !== "production";
+        if (sandboxId !== sandboxEnv) {
+          throw new Error(
+            sandboxId
+              ? "The Application ID is a Sandbox one but NEXT_PUBLIC_SQUARE_ENVIRONMENT is production."
+              : "The Application ID is a Production one but NEXT_PUBLIC_SQUARE_ENVIRONMENT isn't production.",
+          );
+        }
         await loadSquare();
         const payments = window.Square!.payments(APP_ID, LOCATION_ID);
         instance = await payments.card({
@@ -74,7 +85,10 @@ export const SquareCard = forwardRef<SquareCardHandle>(function SquareCard(_prop
         setStatus("ready");
       } catch (err) {
         console.error("[square]", err);
-        if (!cancelled) setStatus("error");
+        if (!cancelled) {
+          setStatus("error");
+          setDetail((err as Error)?.message ?? String(err));
+        }
       }
     })();
     return () => {
@@ -108,6 +122,7 @@ export const SquareCard = forwardRef<SquareCardHandle>(function SquareCard(_prop
       {status === "error" && (
         <p className="notice error" role="alert">
           The card form couldn&apos;t load. Refresh the page to try again.
+          {detail && <span className="error-detail">Details: {detail}</span>}
         </p>
       )}
     </div>
