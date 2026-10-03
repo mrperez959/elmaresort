@@ -101,6 +101,17 @@ Las fotos están en `public/photos/` en WebP, en dos tamaños (`nombre.webp` de 
 
 Para agregar una foto nueva, conviértela con cualquier herramienta a WebP en esos dos tamaños, ponla en `public/photos/` y agrégala a la lista.
 
+## Estado de las conexiones
+
+Arriba del panel `/admin` hay una sección **Connections** que revisa, cada vez que abres el panel:
+
+- **Hospitable:** si el token sirve, si el ID de la propiedad existe (si no existe, te muestra la lista de tus propiedades con su ID correcto) y cuántas noches abiertas hay en los próximos 60 días.
+- **Square:** si están las tres variables.
+- **Impuesto:** si ya lo configuraste.
+- **Reseñas:** si cargaron.
+
+Si el calendario de la web no deja seleccionar fechas, empieza por aquí.
+
 ## Reseñas
 
 La sección "What guests say" muestra las reseñas reales de tu propiedad en todas las plataformas conectadas a Hospitable (Airbnb, Vrbo, etc.), sin escribir nada a mano:

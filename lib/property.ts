@@ -43,7 +43,22 @@ export type AmenityIcon =
   | "kitchen"
   | "laundry"
   | "guests"
-  | "pets";
+  | "pets"
+  | "wifi"
+  | "ac"
+  | "heating"
+  | "hot-water"
+  | "tv"
+  | "fridge"
+  | "cooking"
+  | "coffee"
+  | "clothes"
+  | "hair-dryer"
+  | "essentials"
+  | "furniture"
+  | "waterfront"
+  | "parking"
+  | "smoke-alarm";
 
 // Only list what guests can actually use. Verify each line before publishing.
 // The guests and pets lines are added on the page from the /admin settings.
@@ -56,4 +71,26 @@ export const AMENITIES: Array<{ icon: AmenityIcon; title: string; detail: string
   { icon: "bed", title: "Bedrooms", detail: "King primary suite with a sitting area and walk-in shower, plus two queen bedrooms." },
   { icon: "kitchen", title: "Kitchen", detail: "Full kitchen with island seating, coffee station and a dining table." },
   { icon: "laundry", title: "Laundry", detail: "Washer and dryer inside the house." },
+];
+
+// The full list, matching the Airbnb listing. Shown under the highlights.
+export const HOUSE_AMENITIES: Array<{ icon: AmenityIcon; title: string; detail?: string }> = [
+  { icon: "wifi", title: "Wifi" },
+  { icon: "ac", title: "Air conditioning" },
+  { icon: "heating", title: "Heating" },
+  { icon: "hot-water", title: "Hot water" },
+  { icon: "tv", title: "TV" },
+  { icon: "waterfront", title: "Waterfront", detail: "Right on the canal" },
+  { icon: "hot-tub", title: "Hot tub" },
+  { icon: "furniture", title: "Outdoor furniture" },
+  { icon: "parking", title: "Free parking on premises" },
+  { icon: "kitchen", title: "Kitchen", detail: "Refrigerator, oven and stovetop" },
+  { icon: "fridge", title: "Refrigerator" },
+  { icon: "cooking", title: "Cooking basics", detail: "Pots and pans, oil, salt and pepper" },
+  { icon: "coffee", title: "Coffee maker" },
+  { icon: "laundry", title: "Washer and dryer" },
+  { icon: "clothes", title: "Iron and hangers" },
+  { icon: "hair-dryer", title: "Hair dryer" },
+  { icon: "essentials", title: "Essentials", detail: "Towels, bed sheets, soap and toilet paper" },
+  { icon: "smoke-alarm", title: "Smoke alarm" },
 ];

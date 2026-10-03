@@ -3,6 +3,7 @@ import { SignOutButton } from "@/components/AuthPanel";
 import { isAdmin } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { recentBookings } from "@/lib/users";
+import { runChecks } from "@/lib/diagnostics";
 import { longDate, money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export default async function Admin() {
     );
   }
 
-  const [settings, bookings] = await Promise.all([getSettings(), recentBookings()]);
+  const [settings, bookings, checks] = await Promise.all([getSettings(), recentBookings(), runChecks()]);
 
   return (
     <main className="page admin">
@@ -26,6 +27,19 @@ export default async function Admin() {
         <h1 className="admin-title">Settings</h1>
         <SignOutButton admin />
       </div>
+      <section className="checks" aria-label="Connections">
+        <h2 className="admin-section first">Connections</h2>
+        <ul>
+          {checks.map((c) => (
+            <li key={c.name} className={`check ${c.status}`}>
+              <span className="check-dot" aria-hidden="true" />
+              <strong>{c.name}</strong>
+              <span>{c.message}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <AdminSettings initial={settings} />
 
       <h2 className="admin-section">Direct bookings</h2>

@@ -312,6 +312,11 @@ export function BookingWidget({ settings, user }: Props) {
               </span>
             </div>
             {minStayHint && <p className="notice">{minStayHint}</p>}
+            {days.length === 0 && (
+              <p className="notice error" role="alert">
+                No dates are open for online booking right now. Please check back soon.
+              </p>
+            )}
           </>
         )}
       </section>

@@ -4,7 +4,7 @@ import { Gallery } from "@/components/Gallery";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Amenities } from "@/components/Amenities";
 import { Reviews } from "@/components/Reviews";
-import { AMENITIES, PHOTOS } from "@/lib/property";
+import { AMENITIES, HOUSE_AMENITIES, PHOTOS } from "@/lib/property";
 import { getSettings, toPublicSettings } from "@/lib/settings";
 import { getReviews } from "@/lib/reviews";
 import { currentUser } from "@/lib/auth";
@@ -39,7 +39,7 @@ export default async function Home() {
     <main className="page">
       <SiteHeader user={user} />
       <Gallery photos={PHOTOS} />
-      <Amenities items={amenities} />
+      <Amenities highlights={amenities} all={HOUSE_AMENITIES} />
       <Suspense fallback={null}>
         <ReviewsSection />
       </Suspense>

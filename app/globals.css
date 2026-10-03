@@ -683,7 +683,7 @@ a {
   margin: 0;
 }
 
-.amenities ul {
+.amenities .highlights {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -692,7 +692,7 @@ a {
   gap: 24px 40px;
 }
 
-.amenities li {
+.highlights li {
   display: grid;
   grid-template-columns: 44px 1fr;
   gap: 14px;
@@ -716,10 +716,59 @@ a {
   margin: 2px 0 2px;
 }
 
-.amenities li p {
+.highlights li p {
   margin: 0;
   color: var(--ink-soft);
   max-width: 44ch;
+}
+
+.all-amenities {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.all-amenities-title {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.1rem;
+  margin: 0 0 16px;
+}
+
+.all-amenities ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 24px;
+}
+
+.all-amenities li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.all-amenities li svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.all-amenities li small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.all-amenities .more-reviews {
+  margin-top: 18px;
+}
+
+@media (max-width: 960px) {
+  .all-amenities ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---------- Reviews ---------- */
@@ -865,7 +914,8 @@ a {
 }
 
 @media (max-width: 560px) {
-  .amenities ul {
+  .amenities .highlights,
+  .all-amenities ul {
     grid-template-columns: 1fr;
   }
   .lightbox figure {
@@ -1177,4 +1227,65 @@ a {
   font-size: 0.8rem;
   color: var(--ink-soft);
   border-bottom: 2px solid var(--ink);
+}
+
+/* ---------- Admin connection checks ---------- */
+
+.admin-section.first {
+  margin-top: 0;
+}
+
+.checks {
+  margin-bottom: 32px;
+}
+
+.checks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 12px 110px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.check:last-child {
+  border-bottom: 0;
+}
+
+.check-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2e8b57;
+}
+
+.check.warn .check-dot {
+  background: var(--citrus);
+}
+
+.check.error .check-dot {
+  background: var(--error);
+}
+
+.check.error span:last-child {
+  color: var(--error);
+}
+
+@media (max-width: 640px) {
+  .check {
+    grid-template-columns: 12px 1fr;
+  }
+  .check span:last-child {
+    grid-column: 2;
+  }
 }
