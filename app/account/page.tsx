@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthPanel, SignOutButton } from "@/components/AuthPanel";
+import { FullInvoice } from "@/components/Invoice";
 import { SiteHeader } from "@/components/SiteHeader";
 import { currentUser } from "@/lib/auth";
 import { bookingsForUser } from "@/lib/users";
@@ -42,6 +43,12 @@ export default async function Account() {
             <strong>{b.code}</strong>
             {b.status !== "confirmed" ? ` (${b.status})` : ""}
           </div>
+          {b.quote && (
+            <details className="trip-receipt">
+              <summary>Receipt</summary>
+              <FullInvoice quote={b.quote} />
+            </details>
+          )}
         </li>
       ))}
     </ul>

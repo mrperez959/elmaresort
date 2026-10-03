@@ -45,7 +45,7 @@ export default async function Home() {
       </Suspense>
       <section id="book" aria-label="Book your stay">
         <Suspense fallback={<p className="notice">Loading…</p>}>
-          <BookingWidget settings={toPublicSettings(settings)} user={user} />
+          <BookingWidget settings={toPublicSettings(settings)} />
         </Suspense>
       </section>
     </main>

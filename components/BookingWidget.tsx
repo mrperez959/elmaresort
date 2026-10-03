@@ -1,14 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Month } from "./Calendar";
-import { SquareCard, type SquareCardHandle } from "./SquareCard";
-import { AuthPanel } from "./AuthPanel";
-import type { BookResult, PublicDay, PublicSettings, PublicUser, Quote } from "@/lib/types";
+import { PriceBeforeTaxes } from "./Invoice";
+import type { PublicDay, PublicSettings, Quote } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
 
-type Props = { settings: PublicSettings; user: PublicUser | null };
+type Props = { settings: PublicSettings };
+
+const count = (v: string | null, fallback: number) => {
+  const n = Number(v);
+  return v !== null && Number.isInteger(n) && n >= 0 ? n : fallback;
+};
 
 function addDays(iso: string, n: number) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -44,61 +49,22 @@ function Stepper(props: {
   );
 }
 
-function Breakdown({ quote }: { quote: Quote }) {
-  const rows: Array<[string, number]> = [];
-  if (quote.weekdayNights) {
-    rows.push([`${money(quote.weekdayRate)} × ${quote.weekdayNights} ${quote.weekdayNights === 1 ? "night" : "nights"}`, quote.weekdayNights * quote.weekdayRate]);
-  }
-  if (quote.weekendNights) {
-    rows.push([`${money(quote.weekendRate)} × ${quote.weekendNights} weekend ${quote.weekendNights === 1 ? "night" : "nights"}`, quote.weekendNights * quote.weekendRate]);
-  }
-  if (quote.lengthDiscount) rows.push([`${quote.lengthDiscount.label} (${quote.lengthDiscount.percent}%)`, -quote.lengthDiscount.amount]);
-  if (quote.directDiscount) rows.push([`Direct booking discount (${quote.directDiscount.percent}%)`, -quote.directDiscount.amount]);
-  if (quote.cleaningFee) rows.push(["Cleaning fee", quote.cleaningFee]);
-  if (quote.petFee) rows.push(["Pet fee", quote.petFee]);
-  if (quote.tax) rows.push(["Taxes", quote.tax]);
-
-  return (
-    <table className="breakdown">
-      <tbody>
-        {rows.map(([label, amount]) => (
-          <tr key={label} className={amount < 0 ? "discount" : undefined}>
-            <th scope="row">{label}</th>
-            <td>{amount < 0 ? `−${money(-amount)}` : money(amount)}</td>
-          </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th scope="row">Total</th>
-          <td>{money(quote.total)}</td>
-        </tr>
-      </tfoot>
-    </table>
-  );
-}
-
-export function BookingWidget({ settings, user }: Props) {
+export function BookingWidget({ settings }: Props) {
   const params = useSearchParams();
 
   const [days, setDays] = useState<PublicDay[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [checkIn, setCheckIn] = useState<string | null>(params.get("checkIn"));
   const [checkOut, setCheckOut] = useState<string | null>(params.get("checkOut"));
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
-  const [infants, setInfants] = useState(0);
-  const [pets, setPets] = useState(0);
+  const [adults, setAdults] = useState(Math.max(1, count(params.get("adults"), 2)));
+  const [children, setChildren] = useState(count(params.get("children"), 0));
+  const [infants, setInfants] = useState(count(params.get("infants"), 0));
+  const [pets, setPets] = useState(count(params.get("pets"), 0));
   const [monthOffset, setMonthOffset] = useState(0);
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
-
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState<string | null>(null);
-  const [booked, setBooked] = useState<Extract<BookResult, { state: "confirmed" }> | null>(null);
-  const cardRef = useRef<SquareCardHandle>(null);
 
   const loadDays = useCallback(() => {
     fetch("/api/availability")
@@ -162,7 +128,6 @@ export function BookingWidget({ settings, user }: Props) {
   useEffect(() => {
     setQuote(null);
     setQuoteError(null);
-    setPayError(null);
     if (!checkIn || !checkOut) return;
     const ctrl = new AbortController();
     setQuoting(true);
@@ -183,67 +148,6 @@ export function BookingWidget({ settings, user }: Props) {
       .finally(() => setQuoting(false));
     return () => ctrl.abort();
   }, [checkIn, checkOut, adults, children, infants, pets]);
-
-  async function pay(e: React.FormEvent) {
-    e.preventDefault();
-    if (!quote || !cardRef.current || !user) return;
-    setPaying(true);
-    setPayError(null);
-    try {
-      const sourceId = await cardRef.current.tokenize(quote.total, {
-        givenName: user.firstName,
-        familyName: user.lastName,
-        email: user.email,
-        phone: user.phone || undefined,
-      });
-      const r = await fetch("/api/book", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          checkIn,
-          checkOut,
-          adults,
-          children,
-          infants,
-          pets,
-          sourceId,
-          idempotencyKey: crypto.randomUUID(),
-          expectedTotal: quote.total,
-        }),
-      });
-      const result: BookResult = await r.json();
-      if (result.state === "confirmed") {
-        setBooked(result);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
-      }
-      if (result.state === "price_changed") setQuote(result.quote);
-      if (result.state === "released") loadDays();
-      setPayError(result.message);
-    } catch (err) {
-      setPayError((err as Error).message || "Payment couldn't be completed. Try again.");
-    } finally {
-      setPaying(false);
-    }
-  }
-
-  if (booked) {
-    return (
-      <section className="status ok" aria-live="polite">
-        <h2>You&apos;re booked, {booked.firstName}.</h2>
-        <p className="big-dates">
-          {longDate(booked.quote.checkIn)} to {longDate(booked.quote.checkOut)}
-        </p>
-        <p>
-          Paid {money(booked.quote.total)}. Confirmation code <strong>{booked.code}</strong>.
-        </p>
-        <p>
-          Your trip is saved in <a href="/account">your account</a>. Check-in details will be sent to {user?.email}{" "}
-          before your arrival.
-        </p>
-      </section>
-    );
-  }
 
   const base = new Date(`${today}T00:00:00Z`);
   const months = [0, 1].map((i) => {
@@ -305,7 +209,8 @@ export function BookingWidget({ settings, user }: Props) {
             </div>
             <div className="legend" aria-hidden="true">
               <span>
-                <i className="swatch open" /> Open, nightly price below the date
+                <i className="swatch open" /> Open, nightly rate below the date (your total with the cleaning fee shows
+                when you pick dates)
               </span>
               <span>
                 <i className="swatch taken" /> Booked
@@ -380,34 +285,21 @@ export function BookingWidget({ settings, user }: Props) {
 
         {quote && (
           <>
-            <Breakdown quote={quote} />
-            {!user ? (
-              <AuthPanel intro="Create an account or sign in to book. Your trips will be saved there." />
-            ) : (
-              <form className="guest-form" onSubmit={pay}>
-                <p className="booking-as">
-                  Booking as{" "}
-                  <strong>
-                    {user.firstName} {user.lastName}
-                  </strong>
-                  <br />
-                  {user.email}
-                </p>
-                <SquareCard ref={cardRef} />
-                {payError && (
-                  <p className="notice error" role="alert">
-                    {payError}
-                  </p>
-                )}
-                <button className="pay" type="submit" disabled={paying}>
-                  {paying ? "Confirming your dates…" : `Pay ${money(quote.total)}`}
-                </button>
-                <p className="fine">
-                  Your card is held, not charged, until your dates are confirmed. If they were taken in the meantime,
-                  the hold is released.
-                </p>
-              </form>
-            )}
+            <PriceBeforeTaxes quote={quote} />
+            <Link
+              className="pay continue"
+              href={`/checkout?${new URLSearchParams({
+                checkIn: quote.checkIn,
+                checkOut: quote.checkOut,
+                adults: String(adults),
+                children: String(children),
+                infants: String(infants),
+                pets: String(pets),
+              })}`}
+            >
+              Continue to checkout
+            </Link>
+            <p className="fine center">You won&apos;t be charged yet.</p>
           </>
         )}
       </aside>

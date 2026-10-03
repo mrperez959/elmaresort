@@ -19,6 +19,15 @@ sus viajes en `/account`.
 
 **Doble reserva dentro de la web:** la base de datos rechaza dos reservas confirmadas que se crucen, aunque dos personas paguen en el mismo segundo.
 
+## Precio en dos pasos
+
+1. **Calendario:** al elegir fechas, el huésped ve en grande el **total antes de impuestos**: noches, descuentos, limpieza y mascota, con cada línea debajo. Un aviso indica que los impuestos de Florida se agregan en el siguiente paso.
+2. **Checkout (`/checkout`):** muestra la factura completa. Primero el total antes de impuestos, luego cada impuesto en su línea (por ejemplo sales tax de Florida, surtax del condado y Tourist Development Tax) y al final el **total a pagar**. Aquí se inicia sesión y se paga.
+
+La limpieza va incluida desde el primer paso a propósito. La regla de la FTC sobre cargos ocultos (vigente desde mayo de 2025) obliga a mostrar desde el principio el total con los cargos obligatorios, y menciona la limpieza de alquileres vacacionales como ejemplo. Solo los impuestos del gobierno pueden agregarse después, siempre antes de pedir el pago.
+
+Después de pagar, el huésped ve su recibo, que también queda guardado en `/account`.
+
 ## Cómo funciona el pago
 
 Todo pasa en una sola petición a `/api/book`:
@@ -42,7 +51,7 @@ Se entra con `ADMIN_PASSWORD`. Contiene:
 - **Tarifas:** limpieza y mascota (por estadía).
 - **Descuentos:** semanal y mensual (no se suman entre sí; aplica el más largo) y el de reserva directa, con interruptor. Los descuentos aplican solo a las noches.
 - **Límites:** huéspedes, mascotas y noches máximas.
-- **Impuesto:** mientras esté vacío, **la reserva en línea está cerrada**.
+- **Impuestos de Florida:** una línea por impuesto, con nombre y porcentaje. Se cobran sobre noches, limpieza y mascota. Mientras no los guardes, **la reserva en línea está cerrada**. Si de verdad no cobras impuestos, borra todas las líneas y guarda.
 - **Reseñas:** calificación general y reseñas individuales (ver abajo).
 - **Reservas directas:** la lista de las hechas en la web.
 
@@ -73,7 +82,7 @@ npm run dev
 
 **Square:** en developer.squareup.com crea una aplicación y copia el Access token, el Application ID y el Location ID. Empieza con Sandbox (tarjeta de prueba `4111 1111 1111 1111`, ZIP `94103`).
 
-**Impuestos:** pon en `/admin` el porcentaje total (sales tax de Florida, surtax del condado y Tourist Development Tax). Confírmalo con el Florida Department of Revenue y el Hillsborough County Tax Collector. En estas reservas tú declaras y pagas esos impuestos.
+**Impuestos:** en `/admin` vienen sugeridas tres líneas sin porcentaje (sales tax de Florida, surtax del condado y Tourist Development Tax); llénalas con las tasas de tu condado. Confírmalo con el Florida Department of Revenue y el Hillsborough County Tax Collector. En estas reservas tú declaras y pagas esos impuestos.
 
 ## Lista de pruebas antes de pasar a producción
 

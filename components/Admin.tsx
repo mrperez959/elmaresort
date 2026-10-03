@@ -51,10 +51,26 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Form state: money as dollar strings, everything else as strings, so inputs
 // can be edited freely. Converted back to cents on save.
+type TaxRow = { name: string; percent: string };
+
 type Form = Record<
-  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls">,
+  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls" | "taxes">,
   string
-> & { weekendNights: number[]; directDiscountEnabled: boolean; icalUrls: string };
+> & {
+  weekendNights: number[];
+  directDiscountEnabled: boolean;
+  icalUrls: string;
+  taxes: TaxRow[];
+  /** false while taxes were never saved (booking closed) */
+  taxesConfigured: boolean;
+};
+
+// Names only: the rates depend on the county and must be confirmed by the owner.
+const SUGGESTED_TAXES: TaxRow[] = [
+  { name: "Florida sales tax", percent: "" },
+  { name: "County discretionary sales surtax", percent: "" },
+  { name: "Tourist development tax", percent: "" },
+];
 
 const MONEY: Array<keyof Settings> = ["baseNightly", "cleaningFee", "petFee"];
 
@@ -63,6 +79,10 @@ function toForm(s: Settings): Form {
   for (const [k, v] of Object.entries(s)) {
     if (k === "weekendNights" || k === "directDiscountEnabled") f[k] = v;
     else if (k === "icalUrls") f[k] = (v as string[]).join("\n");
+    else if (k === "taxes") {
+      f.taxesConfigured = v !== null;
+      f.taxes = v === null ? SUGGESTED_TAXES : (v as Settings["taxes"])!.map((t) => ({ name: t.name, percent: String(t.percent) }));
+    }
     else if (MONEY.includes(k as keyof Settings)) f[k] = ((v as number) / 100).toFixed(2);
     else f[k] = v === null ? "" : String(v);
   }
@@ -73,10 +93,15 @@ function fromForm(f: Form): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(f)) {
     if (k === "weekendNights" || k === "directDiscountEnabled") out[k] = v;
-    else if (k === "icalUrls") out[k] = String(v).split(/\s+/).filter(Boolean);
+    else if (k === "taxesConfigured") continue;
+    else if (k === "taxes") {
+      const rows = v as TaxRow[];
+      // Untouched suggestions keep booking closed instead of failing validation.
+      out[k] = !f.taxesConfigured && rows.every((r) => r.percent.trim() === "") ? null : rows;
+    } else if (k === "icalUrls") out[k] = String(v).split(/\s+/).filter(Boolean);
     else if (k === "reviewsPlatform") out[k] = v;
     else if (MONEY.includes(k as keyof Settings)) out[k] = Math.round(Number(v) * 100);
-    else if (k === "taxRatePercent" || k === "reviewsAverage" || k === "reviewsCount") out[k] = v === "" ? null : Number(v);
+    else if (k === "reviewsAverage" || k === "reviewsCount") out[k] = v === "" ? null : Number(v);
     else out[k] = Number(v);
   }
   return out;
@@ -148,9 +173,9 @@ export function AdminSettings({ initial }: { initial: Settings }) {
 
   return (
     <form className="admin-form" onSubmit={save}>
-      {form.taxRatePercent === "" && (
+      {!form.taxesConfigured && (
         <p className="notice error" role="alert">
-          Online booking is closed until you set the tax rate below. Enter 0 if you really don&apos;t collect tax.
+          Online booking is closed until you fill in the Florida taxes below and save.
         </p>
       )}
 
@@ -248,13 +273,68 @@ export function AdminSettings({ initial }: { initial: Settings }) {
         <Field label="Maximum guests" hint="Adults and children; infants don't count" value={form.maxGuests} onChange={set("maxGuests")} />
         <Field label="Maximum pets" hint="0 means no pets" value={form.maxPets} onChange={set("maxPets")} />
         <Field label="Longest online stay" suffix="nights" value={form.maxNights} onChange={set("maxNights")} />
-        <Field
-          label="Tax rate"
-          suffix="%"
-          hint="Total of state, county and tourist taxes, on nights and fees"
-          value={form.taxRatePercent}
-          onChange={set("taxRatePercent")}
-        />
+      </fieldset>
+
+      <fieldset>
+        <legend>Florida taxes</legend>
+        <div className="tax-rows wide">
+          {form.taxes.map((t, i) => (
+            <div className="tax-row" key={i}>
+              <label className="field">
+                <span className="field-label">Tax name</span>
+                <span className="field-input">
+                  <input
+                    value={t.name}
+                    onChange={(e) => {
+                      setStatus(null);
+                      setForm({ ...form, taxes: form.taxes.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)) });
+                    }}
+                  />
+                </span>
+              </label>
+              <label className="field">
+                <span className="field-label">Rate</span>
+                <span className="field-input">
+                  <input
+                    inputMode="decimal"
+                    value={t.percent}
+                    onChange={(e) => {
+                      setStatus(null);
+                      setForm({
+                        ...form,
+                        taxes: form.taxes.map((r, j) => (j === i ? { ...r, percent: e.target.value } : r)),
+                      });
+                    }}
+                  />
+                  <span className="affix">%</span>
+                </span>
+              </label>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setStatus(null);
+                  setForm({ ...form, taxesConfigured: true, taxes: form.taxes.filter((_, j) => j !== i) });
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="more-reviews"
+            disabled={form.taxes.length >= 6}
+            onClick={() => setForm({ ...form, taxes: [...form.taxes, { name: "", percent: "" }] })}
+          >
+            Add tax line
+          </button>
+        </div>
+        <p className="field-hint wide">
+          Charged on the nights, cleaning fee and pet fee, and shown to the guest line by line at checkout. Rates
+          depend on the county: confirm them with the Florida Department of Revenue and your county tax collector.
+          Remove every line only if you don&apos;t collect taxes on these bookings.
+        </p>
       </fieldset>
 
       <fieldset>

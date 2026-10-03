@@ -60,9 +60,16 @@ export async function runChecks(): Promise<Check[]> {
 
   // Tax
   checks.push(
-    settings.taxRatePercent === null
-      ? { name: "Tax rate", status: "error", message: "Not set. Online booking stays closed until you set it below." }
-      : { name: "Tax rate", status: "ok", message: `${settings.taxRatePercent}%.` },
+    settings.taxes === null
+      ? { name: "Taxes", status: "error", message: "Not set. Online booking stays closed until you set them below." }
+      : {
+          name: "Taxes",
+          status: "ok",
+          message: settings.taxes.length
+            ? settings.taxes.map((t) => `${t.name} ${t.percent}%`).join(", ") +
+              ` (total ${Math.round(settings.taxes.reduce((a, t) => a + t.percent, 0) * 1000) / 1000}%).`
+            : "No taxes are charged.",
+        },
   );
 
   // Reviews

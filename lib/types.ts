@@ -10,6 +10,8 @@ export type PublicDay = {
   closedForCheckout: boolean;
 };
 
+export type TaxLine = { name: string; percent: number };
+
 /** All pricing and policy rules. Money in cents. */
 export type Settings = {
   baseNightly: number;
@@ -28,8 +30,12 @@ export type Settings = {
   monthlyMinNights: number;
   directDiscountEnabled: boolean;
   directDiscountPercent: number;
-  /** null = not configured yet; online booking stays closed */
-  taxRatePercent: number | null;
+  /**
+   * Government taxes, each its own line on the invoice (e.g. Florida sales tax,
+   * county surtax, tourist development tax). null = not configured yet:
+   * online booking stays closed. [] = deliberately no taxes.
+   */
+  taxes: TaxLine[] | null;
   maxNights: number;
   minNights: number;
   /** Export (.ics) links from Airbnb, Vrbo, etc. Their busy dates block the site. */
@@ -77,8 +83,12 @@ export type Quote = StayRequest & {
   accommodation: number;
   cleaningFee: number;
   petFee: number;
+  /** nights after discounts + cleaning + pet fee: the price before government taxes */
+  subtotal: number;
+  taxes: Array<TaxLine & { amount: number }>;
+  /** sum of all tax lines */
   tax: number;
-  taxRatePercent: number;
+  /** what the guest pays */
   total: number;
 };
 
@@ -101,6 +111,8 @@ export type BookingSummary = {
   createdAt: string;
   guestName?: string;
   guestEmail?: string;
+  /** full price breakdown saved at booking time (older bookings may lack it) */
+  quote?: Quote | null;
 };
 
 export type BookResult =

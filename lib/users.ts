@@ -73,6 +73,7 @@ type BookingRow = {
   total_cents: number;
   status: string;
   created_at: Date;
+  quote?: Quote | null;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -80,7 +81,7 @@ type BookingRow = {
 
 const SELECT_BOOKING = `
   SELECT b.code, to_char(b.check_in, 'YYYY-MM-DD') AS check_in, to_char(b.check_out, 'YYYY-MM-DD') AS check_out,
-         b.adults, b.children, b.pets, b.total_cents, b.status, b.created_at`;
+         b.adults, b.children, b.pets, b.total_cents, b.status, b.created_at, b.quote`;
 
 function toSummary(r: BookingRow): BookingSummary {
   return {
@@ -92,6 +93,7 @@ function toSummary(r: BookingRow): BookingSummary {
     total: r.total_cents,
     status: r.status,
     createdAt: new Date(r.created_at).toISOString(),
+    quote: r.quote && Array.isArray((r.quote as Quote).taxes) ? r.quote : null,
     ...(r.email ? { guestName: `${r.first_name} ${r.last_name}`, guestEmail: r.email } : {}),
   };
 }

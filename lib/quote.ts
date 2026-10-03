@@ -51,7 +51,7 @@ const pct = (amount: number, percent: number) => Math.round((amount * percent) /
  * prices and policies from `s` (the admin settings).
  */
 export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: string): Quote {
-  if (s.taxRatePercent === null) {
+  if (s.taxes === null) {
     throw new QuoteError("not_ready", "Online booking isn't open yet. Please check back soon.");
   }
   const nights = nightsBetween(stay.checkIn, stay.checkOut);
@@ -121,7 +121,10 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
   const accommodation = afterLength - (directDiscount?.amount ?? 0);
   const cleaningFee = s.cleaningFee;
   const petFee = stay.pets > 0 ? s.petFee : 0;
-  const tax = pct(accommodation + cleaningFee + petFee, s.taxRatePercent);
+  const subtotal = accommodation + cleaningFee + petFee;
+  // Florida taxes transient rentals on the full charge, fees included. Each line is rounded on its own.
+  const taxes = s.taxes.map((t) => ({ ...t, amount: pct(subtotal, t.percent) }));
+  const tax = taxes.reduce((sum, t) => sum + t.amount, 0);
 
   return {
     ...stay,
@@ -137,9 +140,10 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
     accommodation,
     cleaningFee,
     petFee,
+    subtotal,
+    taxes,
     tax,
-    taxRatePercent: s.taxRatePercent,
-    total: accommodation + cleaningFee + petFee + tax,
+    total: subtotal + tax,
   };
 }
 

@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   monthlyMinNights: 28,
   directDiscountEnabled: true,
   directDiscountPercent: 5,
-  taxRatePercent: null, // must be set in /admin before online booking opens
+  taxes: null, // must be set in /admin before online booking opens
   maxNights: 90,
   minNights: 2,
   icalUrls: [],
@@ -37,8 +37,16 @@ const store = globalThis as unknown as { __elmaSettings?: { at: number; value: S
 export async function getSettings(): Promise<Settings> {
   const hit = store.__elmaSettings;
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
-  const rows = await query<{ data: Partial<Settings> }>("SELECT data FROM settings WHERE id = 1");
-  const value = { ...DEFAULT_SETTINGS, ...(rows[0]?.data ?? {}) };
+  const rows = await query<{ data: Partial<Settings> & { taxRatePercent?: number | null } }>(
+    "SELECT data FROM settings WHERE id = 1",
+  );
+  const stored = rows[0]?.data ?? {};
+  const { taxRatePercent: legacyTax, ...rest } = stored;
+  const value: Settings = { ...DEFAULT_SETTINGS, ...rest };
+  // Older versions stored one combined rate.
+  if (stored.taxes === undefined && typeof legacyTax === "number") {
+    value.taxes = [{ name: "Taxes", percent: legacyTax }];
+  }
   store.__elmaSettings = { at: Date.now(), value };
   return value;
 }
@@ -66,8 +74,20 @@ export function validateSettings(raw: unknown): Settings {
     ? [...new Set(input.weekendNights.map(Number))].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort()
     : DEFAULT_SETTINGS.weekendNights;
 
-  const taxRaw = input.taxRatePercent;
-  const taxRatePercent = taxRaw === null || taxRaw === "" || taxRaw === undefined ? null : percent(input, "taxRatePercent", 30);
+  let taxes: Settings["taxes"] = null;
+  if (Array.isArray(input.taxes)) {
+    if (input.taxes.length > 6) throw new SettingsError("Use at most 6 tax lines.");
+    taxes = input.taxes.map((t) => {
+      const line = (t ?? {}) as Record<string, unknown>;
+      const name = String(line.name ?? "").trim().slice(0, 60);
+      const n = Number(line.percent);
+      if (!name) throw new SettingsError("Every tax line needs a name, e.g. Florida sales tax.");
+      if (line.percent === "" || !Number.isFinite(n) || n < 0 || n > 30) {
+        throw new SettingsError(`Enter a percentage between 0 and 30 for "${name}".`);
+      }
+      return { name, percent: Math.round(n * 1000) / 1000 };
+    });
+  }
 
   const icalUrls = (Array.isArray(input.icalUrls) ? input.icalUrls : String(input.icalUrls ?? "").split(/\s+/))
     .map((u) => String(u).trim())
@@ -110,7 +130,7 @@ export function validateSettings(raw: unknown): Settings {
     monthlyMinNights: int(input, "monthlyMinNights", 2, 120),
     directDiscountEnabled: Boolean(input.directDiscountEnabled),
     directDiscountPercent: percent(input, "directDiscountPercent", 50),
-    taxRatePercent,
+    taxes,
     maxNights: int(input, "maxNights", 1, 365),
     minNights: int(input, "minNights", 1, 30),
     icalUrls: [...new Set(icalUrls)],
@@ -146,6 +166,6 @@ export function toPublicSettings(s: Settings): PublicSettings {
     weeklyMinNights: s.weeklyMinNights,
     monthlyDiscountPercent: s.monthlyDiscountPercent,
     monthlyMinNights: s.monthlyMinNights,
-    bookingOpen: s.taxRatePercent !== null && s.icalUrls.length > 0,
+    bookingOpen: s.taxes !== null && s.icalUrls.length > 0,
   };
 }
