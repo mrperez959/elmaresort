@@ -46,15 +46,27 @@ export async function createUser(input: {
 }
 
 /** Saves a confirmed booking. Throws a pg error with code 23P01 if the nights overlap another one. */
-export async function insertBooking(b: { userId: string; code: string; squarePaymentId: string; quote: Quote }) {
+export async function insertBooking(b: {
+  userId: string;
+  code: string;
+  squarePaymentId: string;
+  quote: Quote;
+  policy: string;
+}) {
   const q = b.quote;
   const rows = await query<{ id: string }>(
-    `INSERT INTO bookings (user_id, code, square_payment_id, check_in, check_out,
-       adults, children, infants, pets, total_cents, quote)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-     RETURNING id`,
+    `WITH b AS (
+       INSERT INTO bookings (user_id, code, square_payment_id, check_in, check_out,
+         adults, children, infants, pets, total_cents, quote, policy)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       RETURNING id
+     ), p AS (
+       INSERT INTO payments (booking_id, square_payment_id, amount_cents, kind)
+       SELECT id, $3, $10, 'booking' FROM b
+     )
+     SELECT id FROM b`,
     [b.userId, b.code, b.squarePaymentId, q.checkIn, q.checkOut,
-     q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q)],
+     q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q), b.policy],
   );
   return rows[0].id;
 }
@@ -74,6 +86,7 @@ type BookingRow = {
   status: string;
   created_at: Date;
   quote?: Quote | null;
+  refunded_cents?: number;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -81,7 +94,7 @@ type BookingRow = {
 
 const SELECT_BOOKING = `
   SELECT b.code, to_char(b.check_in, 'YYYY-MM-DD') AS check_in, to_char(b.check_out, 'YYYY-MM-DD') AS check_out,
-         b.adults, b.children, b.pets, b.total_cents, b.status, b.created_at, b.quote`;
+         b.adults, b.children, b.pets, b.total_cents, b.status, b.created_at, b.quote, b.refunded_cents`;
 
 function toSummary(r: BookingRow): BookingSummary {
   return {
@@ -94,6 +107,7 @@ function toSummary(r: BookingRow): BookingSummary {
     status: r.status,
     createdAt: new Date(r.created_at).toISOString(),
     quote: r.quote && Array.isArray((r.quote as Quote).taxes) ? r.quote : null,
+    refunded: r.refunded_cents ?? 0,
     ...(r.email ? { guestName: `${r.first_name} ${r.last_name}`, guestEmail: r.email } : {}),
   };
 }

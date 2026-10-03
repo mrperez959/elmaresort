@@ -40,6 +40,46 @@ Todo pasa en una sola petición a `/api/book`:
 
 Si algo falla después del paso 3, la autorización se anula y el huésped no paga nada. Si el servidor se cae a la mitad, Square la anula solo a los 30 minutos.
 
+## Políticas de cancelación
+
+Son las mismas cuatro de Airbnb y se eligen en `/admin`. Elige la misma que usas en Airbnb:
+
+| Política | Reembolso completo | Después |
+| --- | --- | --- |
+| Flexible | hasta 24 h antes del check-in | no se devuelve la primera noche |
+| Moderate | hasta 5 días antes | no se devuelve la primera noche y del resto se devuelve el 50% |
+| Limited | hasta 14 días antes | 50% de las noches hasta 7 días antes; luego nada |
+| Firm | hasta 30 días antes | 50% de las noches hasta 7 días antes; luego nada |
+
+Reglas comunes a todas:
+
+- **Período de gracia, como en Airbnb:** reembolso completo si se cancela dentro de las 24 h siguientes a reservar, siempre que falten al menos 7 días para el check-in.
+- **Tarifas:** la limpieza y la mascota siempre se devuelven si se cancela antes del check-in, con sus impuestos.
+- **Plazos:** cuentan desde la hora de check-in configurada.
+- **Reservas existentes:** cada reserva guarda la política vigente al momento de reservar, así que cambiar la política no afecta a las reservas que ya existen.
+
+## Panel del huésped (`/account`)
+
+El huésped ve sus viajes próximos, pasados y cancelados. En cada viaje (`/account/trips/<código>`) puede:
+
+- **Ver el recibo y la política**, con fechas concretas ("reembolso completo si cancelas antes del…").
+- **Cambiar fechas o número de huéspedes y mascotas:** ve el precio nuevo antes de confirmar.
+  - Si sube, paga la diferencia con tarjeta.
+  - Si baja, se le devuelve lo que permite la política sobre la parte que quitó (las tarifas que se eliminan siempre se devuelven).
+- **Cancelar:** ve exactamente cuánto recibirá antes de confirmar, y el reembolso va automático a su tarjeta por Square.
+
+Los cambios y cancelaciones solo se pueden hacer antes de la hora de check-in. Después de eso, el huésped tiene que escribirte.
+
+En `/admin`, cada reserva tiene dos opciones: **Cancel (policy)**, que reembolsa según la política, y **Cancel (full refund)**, que lo devuelve todo.
+
+Si Square falla al reembolsar, la reserva queda cancelada y el huésped ve un mensaje de que le enviarás el reembolso. En ese caso, haz el reembolso desde el Dashboard de Square.
+
+## Botón de chat
+
+Es un botón flotante en todas las páginas, excepto `/admin`. A los pocos segundos de entrar muestra el mensaje "Ready for a little waterfront getaway? 🌴". Al abrirlo, el huésped escribe su mensaje y lo envía por **WhatsApp**, **SMS** o **email**, con el texto ya escrito.
+
+Los números y el email se configuran en `/admin` → *Chat button*. Si están vacíos, el botón no aparece.
+
 ## Panel de admin (`/admin`)
 
 Se entra con `ADMIN_PASSWORD`. Contiene:

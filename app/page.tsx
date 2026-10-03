@@ -4,6 +4,7 @@ import { Gallery } from "@/components/Gallery";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Amenities } from "@/components/Amenities";
 import { Reviews } from "@/components/Reviews";
+import { GoodToKnow } from "@/components/GoodToKnow";
 import { AMENITIES, HOUSE_AMENITIES, PHOTOS } from "@/lib/property";
 import { getSettings, toPublicSettings } from "@/lib/settings";
 import { getReviews } from "@/lib/reviews";
@@ -43,6 +44,13 @@ export default async function Home() {
       <Suspense fallback={null}>
         <ReviewsSection />
       </Suspense>
+      <GoodToKnow
+        policy={settings.cancellationPolicy}
+        checkInHour={settings.checkInHour}
+        checkOutHour={settings.checkOutHour}
+        maxPets={settings.maxPets}
+        petFee={settings.petFee}
+      />
       <section id="book" aria-label="Book your stay">
         <Suspense fallback={<p className="notice">Loading…</p>}>
           <BookingWidget settings={toPublicSettings(settings)} />

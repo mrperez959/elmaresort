@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { AuthPanel, SignOutButton } from "@/components/AuthPanel";
-import { FullInvoice } from "@/components/Invoice";
 import { SiteHeader } from "@/components/SiteHeader";
 import { currentUser } from "@/lib/auth";
 import { bookingsForUser } from "@/lib/users";
@@ -27,8 +26,8 @@ export default async function Account() {
 
   const bookings = await bookingsForUser(user.id);
   const today = todayAtProperty();
-  const upcoming = bookings.filter((b) => b.checkOut >= today).reverse();
-  const past = bookings.filter((b) => b.checkOut < today);
+  const upcoming = bookings.filter((b) => b.checkOut >= today && b.status === "confirmed").reverse();
+  const past = bookings.filter((b) => b.checkOut < today || b.status !== "confirmed");
 
   const list = (items: typeof bookings) => (
     <ul className="trips">
@@ -41,14 +40,14 @@ export default async function Account() {
             {b.guests} {b.guests === 1 ? "guest" : "guests"}
             {b.pets ? `, ${b.pets} ${b.pets === 1 ? "pet" : "pets"}` : ""}. Paid {money(b.total)}. Code{" "}
             <strong>{b.code}</strong>
-            {b.status !== "confirmed" ? ` (${b.status})` : ""}
+            {b.status === "cancelled" ? " Cancelled." : ""}
+            {b.refunded ? ` Refunded ${money(b.refunded)}.` : ""}
           </div>
-          {b.quote && (
-            <details className="trip-receipt">
-              <summary>Receipt</summary>
-              <FullInvoice quote={b.quote} />
-            </details>
-          )}
+          {b.quote ? (
+            <Link href={`/account/trips/${b.code}`} className="manage-link">
+              {b.status === "confirmed" && b.checkOut >= today ? "View, change or cancel" : "View receipt"}
+            </Link>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -78,7 +77,7 @@ export default async function Account() {
 
         {past.length > 0 && (
           <>
-            <h3>Past</h3>
+            <h3>Past and cancelled</h3>
             {list(past)}
           </>
         )}

@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { square, cardDeclineMessage } from "./square";
 import { env } from "./env";
 import { quoteStay, QuoteError } from "./quote";
+import { getSettings } from "./settings";
 import { insertBooking, cancelBooking } from "./users";
 import { OVERLAP_ERROR } from "./db";
 import type { BookResult, PublicUser, StayRequest } from "./types";
@@ -95,7 +96,8 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
   const code = newCode();
   let bookingId: string;
   try {
-    bookingId = await insertBooking({ userId: guest.id, code, squarePaymentId: paymentId, quote });
+    const { cancellationPolicy } = await getSettings();
+    bookingId = await insertBooking({ userId: guest.id, code, squarePaymentId: paymentId, quote, policy: cancellationPolicy });
   } catch (err) {
     await voidPayment(paymentId);
     if ((err as { code?: string }).code === OVERLAP_ERROR) return TAKEN;

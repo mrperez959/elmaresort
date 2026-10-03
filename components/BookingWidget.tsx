@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Month } from "./Calendar";
 import { PriceBeforeTaxes } from "./Invoice";
+import { Stepper } from "./Stepper";
+import { POLICIES } from "@/lib/policy";
 import type { PublicDay, PublicSettings, Quote } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
 
@@ -19,34 +21,6 @@ function addDays(iso: string, n: number) {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-}
-
-function Stepper(props: {
-  label: string;
-  hint?: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (n: number) => void;
-}) {
-  const { label, hint, value, min, max, onChange } = props;
-  return (
-    <div className="stepper">
-      <div>
-        <div className="stepper-label">{label}</div>
-        {hint && <div className="stepper-hint">{hint}</div>}
-      </div>
-      <div className="stepper-controls">
-        <button type="button" aria-label={`Fewer ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(value - 1)}>
-          −
-        </button>
-        <span aria-live="polite">{value}</span>
-        <button type="button" aria-label={`More ${label.toLowerCase()}`} disabled={value >= max} onClick={() => onChange(value + 1)}>
-          +
-        </button>
-      </div>
-    </div>
-  );
 }
 
 export function BookingWidget({ settings }: Props) {
@@ -299,7 +273,9 @@ export function BookingWidget({ settings }: Props) {
             >
               Continue to checkout
             </Link>
-            <p className="fine center">You won&apos;t be charged yet.</p>
+            <p className="fine center">
+              You won&apos;t be charged yet. {POLICIES[settings.cancellationPolicy].summary.split(". ")[0]}.
+            </p>
           </>
         )}
       </aside>

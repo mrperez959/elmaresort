@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Settings } from "@/lib/types";
 import type { PublicReview } from "@/lib/reviews";
 import { weekendRate } from "@/lib/pricing";
+import { POLICIES, POLICY_IDS } from "@/lib/policy";
 import { money } from "@/lib/format";
 
 export function AdminLogin() {
@@ -54,7 +55,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 type TaxRow = { name: string; percent: string };
 
 type Form = Record<
-  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls" | "taxes">,
+  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls" | "taxes" | "cancellationPolicy">,
   string
 > & {
   weekendNights: number[];
@@ -63,6 +64,7 @@ type Form = Record<
   taxes: TaxRow[];
   /** false while taxes were never saved (booking closed) */
   taxesConfigured: boolean;
+  cancellationPolicy: Settings["cancellationPolicy"];
 };
 
 // Names only: the rates depend on the county and must be confirmed by the owner.
@@ -77,7 +79,7 @@ const MONEY: Array<keyof Settings> = ["baseNightly", "cleaningFee", "petFee"];
 function toForm(s: Settings): Form {
   const f = {} as Record<string, unknown>;
   for (const [k, v] of Object.entries(s)) {
-    if (k === "weekendNights" || k === "directDiscountEnabled") f[k] = v;
+    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy") f[k] = v;
     else if (k === "icalUrls") f[k] = (v as string[]).join("\n");
     else if (k === "taxes") {
       f.taxesConfigured = v !== null;
@@ -92,8 +94,9 @@ function toForm(s: Settings): Form {
 function fromForm(f: Form): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(f)) {
-    if (k === "weekendNights" || k === "directDiscountEnabled") out[k] = v;
+    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy") out[k] = v;
     else if (k === "taxesConfigured") continue;
+    else if (k === "contactWhatsApp" || k === "contactPhone" || k === "contactEmail") out[k] = v;
     else if (k === "taxes") {
       const rows = v as TaxRow[];
       // Untouched suggestions keep booking closed instead of failing validation.
@@ -338,6 +341,57 @@ export function AdminSettings({ initial }: { initial: Settings }) {
       </fieldset>
 
       <fieldset>
+        <legend>Cancellation policy and check-in</legend>
+        <label className="field wide-field">
+          <span className="field-label">Policy for new bookings</span>
+          <span className="field-input">
+            <select
+              value={form.cancellationPolicy}
+              onChange={(e) => {
+                setStatus(null);
+                setForm({ ...form, cancellationPolicy: e.target.value as Settings["cancellationPolicy"] });
+              }}
+            >
+              {POLICY_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {POLICIES[id].name}
+                </option>
+              ))}
+            </select>
+          </span>
+          <span className="field-hint">
+            {POLICIES[form.cancellationPolicy].summary} Choose the same one you use on Airbnb. Existing bookings keep the
+            policy they were booked with.
+          </span>
+        </label>
+        <Field label="Check-in from" suffix=":00 (24h)" hint="Deadlines count from this time" value={form.checkInHour} onChange={set("checkInHour")} />
+        <Field label="Check-out by" suffix=":00 (24h)" value={form.checkOutHour} onChange={set("checkOutHour")} />
+      </fieldset>
+
+      <fieldset>
+        <legend>Chat button</legend>
+        <label className="field">
+          <span className="field-label">WhatsApp number</span>
+          <span className="field-input">
+            <input value={form.contactWhatsApp} placeholder="+1 813 555 0100" onChange={(e) => set("contactWhatsApp")(e.target.value)} />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Phone for texts</span>
+          <span className="field-input">
+            <input value={form.contactPhone} placeholder="+1 813 555 0100" onChange={(e) => set("contactPhone")(e.target.value)} />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Email</span>
+          <span className="field-input">
+            <input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail")(e.target.value)} />
+          </span>
+        </label>
+        <p className="field-hint wide">The floating chat button appears on the site once at least one of these is filled in.</p>
+      </fieldset>
+
+      <fieldset>
         <legend>Reviews summary</legend>
         <Field label="Overall rating" hint="As shown on your listing, e.g. 4.92" suffix="★" value={form.reviewsAverage} onChange={set("reviewsAverage")} />
         <Field label="Number of reviews" value={form.reviewsCount} onChange={set("reviewsCount")} />
@@ -484,6 +538,38 @@ export function CopyField({ value }: { value: string }) {
         }}
       >
         {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+export function AdminCancel({ code }: { code: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  async function run(full: boolean) {
+    const text = full
+      ? `Cancel ${code} and refund everything the guest paid?`
+      : `Cancel ${code} and refund what the cancellation policy allows?`;
+    if (!window.confirm(text)) return;
+    setBusy(true);
+    const r = await fetch(`/api/admin/trips/${encodeURIComponent(code)}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full }),
+    });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return window.alert(body.error ?? "Couldn't cancel.");
+    window.alert(`Cancelled. Refunded ${money(body.refunded ?? 0)}.`);
+    router.refresh();
+  }
+  return (
+    <div className="admin-cancel">
+      <button type="button" className="link" disabled={busy} onClick={() => run(false)}>
+        Cancel (policy)
+      </button>
+      <button type="button" className="link" disabled={busy} onClick={() => run(true)}>
+        Cancel (full refund)
       </button>
     </div>
   );

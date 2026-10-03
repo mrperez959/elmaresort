@@ -7,10 +7,11 @@ import { AuthPanel } from "./AuthPanel";
 import { FullInvoice } from "./Invoice";
 import type { BookResult, PublicUser, Quote, StayRequest } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
+import { POLICIES, policyDeadlines, zonedInstant, GRACE_NOTE, FEES_NOTE, type PolicyId } from "@/lib/policy";
 
-type Props = { stay: StayRequest; user: PublicUser | null };
+type Props = { stay: StayRequest; user: PublicUser | null; policy: PolicyId; checkInHour: number };
 
-export function Checkout({ stay, user }: Props) {
+export function Checkout({ stay, user, policy, checkInHour }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
@@ -94,8 +95,8 @@ export function Checkout({ stay, user }: Props) {
           <FullInvoice quote={q} />
         </div>
         <p>
-          Your trip and this receipt are saved in <Link href="/account">your account</Link>. Check-in details will be sent
-          to {user?.email} before your arrival.
+          Your trip and this receipt are saved in <Link href="/account">your account</Link>, where you can change or
+          cancel it. Check-in details will be sent to {user?.email} before your arrival.
         </p>
       </section>
     );
@@ -137,6 +138,15 @@ export function Checkout({ stay, user }: Props) {
         ) : (
           <FullInvoice quote={quote} />
         )}
+
+        <h2 className="invoice-heading">Cancellation policy: {POLICIES[policy].name}</h2>
+        <ul className="policy-lines">
+          {policyDeadlines(policy, zonedInstant(stay.checkIn, checkInHour)).map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+          <li>{GRACE_NOTE}</li>
+          <li>{FEES_NOTE}</li>
+        </ul>
       </section>
 
       <section className="checkout-pay summary" aria-label="Pay">
@@ -164,8 +174,8 @@ export function Checkout({ stay, user }: Props) {
               {paying ? "Confirming your dates…" : `Pay ${money(quote.total)}`}
             </button>
             <p className="fine">
-              Your card is held, not charged, until your dates are confirmed. If they were taken in the meantime, the
-              hold is released.
+              By selecting Pay, you agree to the cancellation policy. Your card is held, not charged, until your dates
+              are confirmed. If they were taken in the meantime, the hold is released.
             </p>
           </form>
         )}

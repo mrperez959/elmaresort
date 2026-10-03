@@ -44,6 +44,14 @@ export type Settings = {
   reviewsAverage: number | null;
   reviewsCount: number | null;
   reviewsPlatform: string;
+  cancellationPolicy: "flexible" | "moderate" | "limited" | "firm";
+  /** local hour (0-23) */
+  checkInHour: number;
+  checkOutHour: number;
+  /** Chat button. Empty = hidden. WhatsApp/phone in international format, e.g. +18135550100 */
+  contactWhatsApp: string;
+  contactPhone: string;
+  contactEmail: string;
 };
 
 export type PublicSettings = {
@@ -57,6 +65,9 @@ export type PublicSettings = {
   monthlyDiscountPercent: number;
   monthlyMinNights: number;
   bookingOpen: boolean;
+  cancellationPolicy: Settings["cancellationPolicy"];
+  checkInHour: number;
+  checkOutHour: number;
 };
 
 export type StayRequest = {
@@ -113,6 +124,7 @@ export type BookingSummary = {
   guestEmail?: string;
   /** full price breakdown saved at booking time (older bookings may lack it) */
   quote?: Quote | null;
+  refunded?: number;
 };
 
 export type BookResult =

@@ -1,6 +1,7 @@
 import "server-only";
 import { query } from "./db";
 import type { PublicSettings, Settings } from "./types";
+import { isPolicyId } from "./policy";
 
 /** Starting values. Everything here can be changed from /admin. */
 export const DEFAULT_SETTINGS: Settings = {
@@ -24,6 +25,12 @@ export const DEFAULT_SETTINGS: Settings = {
   reviewsAverage: null,
   reviewsCount: null,
   reviewsPlatform: "Airbnb",
+  cancellationPolicy: "moderate",
+  checkInHour: 16,
+  checkOutHour: 11,
+  contactWhatsApp: "",
+  contactPhone: "",
+  contactEmail: "",
 };
 
 export class SettingsError extends Error {}
@@ -65,6 +72,21 @@ function percent(input: Record<string, unknown>, key: keyof Settings, max = 100)
     throw new SettingsError(`${String(key)} must be between 0 and ${max}.`);
   }
   return Math.round(n * 100) / 100;
+}
+
+function phone(v: unknown, label: string): string {
+  const raw = String(v ?? "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/[^\d+]/g, "");
+  if (!/^\+?\d{10,15}$/.test(digits)) throw new SettingsError(`${label}: use the full number with country code, e.g. +1 813 555 0100.`);
+  return digits.startsWith("+") ? digits : `+${digits.length === 10 ? "1" + digits : digits}`;
+}
+
+function email(v: unknown): string {
+  const raw = String(v ?? "").trim();
+  if (!raw) return "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) throw new SettingsError("Contact email isn't valid.");
+  return raw.slice(0, 200);
 }
 
 /** Validate untrusted admin input. Money is in cents. */
@@ -137,6 +159,12 @@ export function validateSettings(raw: unknown): Settings {
     reviewsAverage,
     reviewsCount,
     reviewsPlatform: String(input.reviewsPlatform ?? "Airbnb").trim().slice(0, 40) || "Airbnb",
+    cancellationPolicy: isPolicyId(input.cancellationPolicy) ? input.cancellationPolicy : "moderate",
+    checkInHour: int(input, "checkInHour", 0, 23),
+    checkOutHour: int(input, "checkOutHour", 0, 23),
+    contactWhatsApp: phone(input.contactWhatsApp, "WhatsApp number"),
+    contactPhone: phone(input.contactPhone, "Phone number"),
+    contactEmail: email(input.contactEmail),
   };
   if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {
@@ -167,5 +195,8 @@ export function toPublicSettings(s: Settings): PublicSettings {
     monthlyDiscountPercent: s.monthlyDiscountPercent,
     monthlyMinNights: s.monthlyMinNights,
     bookingOpen: s.taxes !== null && s.icalUrls.length > 0,
+    cancellationPolicy: s.cancellationPolicy,
+    checkInHour: s.checkInHour,
+    checkOutHour: s.checkOutHour,
   };
 }

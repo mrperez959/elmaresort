@@ -65,6 +65,28 @@ BEGIN
   END IF;
 END $$;
 
+-- Cancellation policy in force when the guest booked, and refund bookkeeping.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS policy text NOT NULL DEFAULT 'moderate';
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS refunded_cents int NOT NULL DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+
+-- Every card payment on a booking (the original plus any paid date changes),
+-- so refunds can be taken from the right one.
+CREATE TABLE IF NOT EXISTS payments (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id         uuid NOT NULL REFERENCES bookings(id),
+  square_payment_id  text NOT NULL,
+  amount_cents       int NOT NULL,
+  refunded_cents     int NOT NULL DEFAULT 0,
+  kind               text NOT NULL DEFAULT 'booking',
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS payments_booking_idx ON payments (booking_id);
+INSERT INTO payments (booking_id, square_payment_id, amount_cents)
+  SELECT b.id, b.square_payment_id, b.total_cents FROM bookings b
+  WHERE NOT EXISTS (SELECT 1 FROM payments p WHERE p.booking_id = b.id);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL,

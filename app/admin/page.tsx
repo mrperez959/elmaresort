@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { AdminLogin, AdminReviews, AdminSettings, CopyField } from "@/components/Admin";
+import { AdminLogin, AdminReviews, AdminSettings, CopyField, AdminCancel } from "@/components/Admin";
 import { listReviews } from "@/lib/reviews";
 import { exportToken } from "@/lib/calendar-export";
 import { SignOutButton } from "@/components/AuthPanel";
@@ -84,6 +84,7 @@ export default async function Admin() {
                 <th>Total</th>
                 <th>Code</th>
                 <th>Booked</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -104,6 +105,11 @@ export default async function Admin() {
                   <td>{money(b.total)}</td>
                   <td>{b.code}</td>
                   <td>{b.createdAt.slice(0, 10)}</td>
+                  <td>
+                    {b.status === "confirmed" ? "Confirmed" : "Cancelled"}
+                    {b.refunded ? <span className="fine"><br />Refunded {money(b.refunded)}</span> : null}
+                    {b.status === "confirmed" && b.quote && <AdminCancel code={b.code} />}
+                  </td>
                 </tr>
               ))}
             </tbody>
