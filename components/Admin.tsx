@@ -157,7 +157,7 @@ export function AdminSettings({ initial }: { initial: Settings }) {
       <fieldset>
         <legend>Calendars</legend>
         <label className="field wide-field">
-          <span className="field-label">Airbnb and Vrbo calendar links (one per line)</span>
+          <span className="field-label">Calendar links (one per line)</span>
           <textarea
             rows={3}
             spellCheck={false}
@@ -169,8 +169,9 @@ export function AdminSettings({ initial }: { initial: Settings }) {
             }}
           />
           <span className="field-hint">
-            In Airbnb: Listing → Availability → Connect calendars → Connect to another website, copy the link. In Vrbo:
-            Calendar → Import/Export → Export. Nights booked there show as booked here.
+            Best: the Hospitable export link (Properties → your property → Export calendar → Copy iCal link) plus
+            the Airbnb export link, which also carries dates you blocked by hand. Nights busy in any of them show as
+            booked here.
           </span>
         </label>
         <Field label="Minimum stay" suffix="nights" value={form.minNights} onChange={set("minNights")} />

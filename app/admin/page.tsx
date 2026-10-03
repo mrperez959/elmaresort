@@ -53,15 +53,15 @@ export default async function Admin() {
       </section>
 
       <section className="export-box" aria-labelledby="export-heading">
-        <h2 id="export-heading" className="admin-section first">Block direct bookings on Airbnb and Vrbo</h2>
+        <h2 id="export-heading" className="admin-section first">Send direct bookings to Hospitable</h2>
         <p>
-          Paste this link once in Airbnb (Availability → Connect calendars → Import calendar) and in Vrbo (Calendar →
-          Import/Export → Import). Every booking made on this website then blocks those dates there.
+          In Hospitable, open your property and under Imported iCal click Add External iCal, then paste this link.
+          Hospitable reads it about every 20 minutes and blocks the dates on Airbnb and Vrbo for you.
         </p>
         <CopyField value={exportUrl} />
         <p className="field-hint">
-          Airbnb and Vrbo re-read this link every few hours, not instantly. When you get a direct booking, block the dates
-          in Hospitable right away to be safe. Keep this link private.
+          If your plan doesn&apos;t allow iCal imports, paste it directly in Airbnb (Availability → Connect calendars) and
+          Vrbo (Import/Export) instead; they re-read it every few hours. Keep this link private.
         </p>
       </section>
 

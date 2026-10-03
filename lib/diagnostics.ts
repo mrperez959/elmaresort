@@ -35,7 +35,9 @@ export async function runChecks(): Promise<Check[]> {
     }
   }
   const labels = settings.icalUrls.map(feedLabel);
-  for (const needed of ["Airbnb", "Vrbo"]) {
+  // A Hospitable export already contains the Airbnb and Vrbo reservations.
+  const viaHospitable = labels.includes("Hospitable");
+  for (const needed of viaHospitable ? [] : ["Airbnb", "Vrbo"]) {
     if (settings.icalUrls.length && !labels.includes(needed)) {
       checks.push({
         name: needed,
