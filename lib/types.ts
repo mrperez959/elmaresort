@@ -31,6 +31,13 @@ export type Settings = {
   /** null = not configured yet; online booking stays closed */
   taxRatePercent: number | null;
   maxNights: number;
+  minNights: number;
+  /** Export (.ics) links from Airbnb, Vrbo, etc. Their busy dates block the site. */
+  icalUrls: string[];
+  /** Overall rating shown on the site, copied from the platform listing. */
+  reviewsAverage: number | null;
+  reviewsCount: number | null;
+  reviewsPlatform: string;
 };
 
 export type PublicSettings = {

@@ -19,6 +19,11 @@ export const DEFAULT_SETTINGS: Settings = {
   directDiscountPercent: 5,
   taxRatePercent: null, // must be set in /admin before online booking opens
   maxNights: 90,
+  minNights: 2,
+  icalUrls: [],
+  reviewsAverage: null,
+  reviewsCount: null,
+  reviewsPlatform: "Airbnb",
 };
 
 export class SettingsError extends Error {}
@@ -64,6 +69,33 @@ export function validateSettings(raw: unknown): Settings {
   const taxRaw = input.taxRatePercent;
   const taxRatePercent = taxRaw === null || taxRaw === "" || taxRaw === undefined ? null : percent(input, "taxRatePercent", 30);
 
+  const icalUrls = (Array.isArray(input.icalUrls) ? input.icalUrls : String(input.icalUrls ?? "").split(/\s+/))
+    .map((u) => String(u).trim())
+    .filter(Boolean);
+  if (icalUrls.length > 6) throw new SettingsError("Use at most 6 calendar links.");
+  for (const u of icalUrls) {
+    let url: URL;
+    try {
+      url = new URL(u);
+    } catch {
+      throw new SettingsError(`This calendar link isn't a valid URL: ${u.slice(0, 80)}`);
+    }
+    if (url.protocol !== "https:") throw new SettingsError("Calendar links must start with https://");
+  }
+
+  const avgRaw = input.reviewsAverage;
+  const reviewsAverage =
+    avgRaw === null || avgRaw === "" || avgRaw === undefined
+      ? null
+      : (() => {
+          const n = Number(avgRaw);
+          if (!Number.isFinite(n) || n < 1 || n > 5) throw new SettingsError("The rating must be between 1 and 5.");
+          return Math.round(n * 100) / 100;
+        })();
+  const countRaw = input.reviewsCount;
+  const reviewsCount =
+    countRaw === null || countRaw === "" || countRaw === undefined ? null : int(input, "reviewsCount", 1, 100_000);
+
   const s: Settings = {
     baseNightly: int(input, "baseNightly", 1000, 10_000_00),
     weekendMarkupPercent: percent(input, "weekendMarkupPercent", 300),
@@ -80,7 +112,13 @@ export function validateSettings(raw: unknown): Settings {
     directDiscountPercent: percent(input, "directDiscountPercent", 50),
     taxRatePercent,
     maxNights: int(input, "maxNights", 1, 365),
+    minNights: int(input, "minNights", 1, 30),
+    icalUrls: [...new Set(icalUrls)],
+    reviewsAverage,
+    reviewsCount,
+    reviewsPlatform: String(input.reviewsPlatform ?? "Airbnb").trim().slice(0, 40) || "Airbnb",
   };
+  if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {
     throw new SettingsError("The monthly discount must start at more nights than the weekly discount.");
   }
@@ -108,6 +146,6 @@ export function toPublicSettings(s: Settings): PublicSettings {
     weeklyMinNights: s.weeklyMinNights,
     monthlyDiscountPercent: s.monthlyDiscountPercent,
     monthlyMinNights: s.monthlyMinNights,
-    bookingOpen: s.taxRatePercent !== null,
+    bookingOpen: s.taxRatePercent !== null && s.icalUrls.length > 0,
   };
 }

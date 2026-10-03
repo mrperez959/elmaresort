@@ -1,13 +1,19 @@
 :root {
-  --mist: #f1f5f3;
+  /* From the Elma Resort logo */
+  --navy: #01325b;
+  --ocean: #035b89;
+  --coral: #fe6b51;
+  --sunset: #fe8d50;
+
+  --mist: #f4f7fa;
   --paper: #ffffff;
-  --ink: #12332d;
-  --ink-soft: #4f6660;
-  --line: #d3ded9;
-  --citrus: #e7ad35;
-  --citrus-soft: #f8e6bd;
-  --error: #a3341f;
-  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --ink: var(--navy);
+  --ink-soft: #4a6177;
+  --line: #d5e0e9;
+  --coral-soft: #ffe7df;
+  --ocean-soft: #e3eef6;
+  --error: #a72714;
+  --display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   --body: "Atkinson Hyperlegible", "Segoe UI", Roboto, sans-serif;
 }
 
@@ -33,7 +39,7 @@ input {
 }
 
 :focus-visible {
-  outline: 3px solid var(--citrus);
+  outline: 3px solid var(--coral);
   outline-offset: 2px;
 }
 
@@ -61,19 +67,21 @@ a {
   align-items: flex-end;
   gap: 24px;
   flex-wrap: wrap;
-  padding-bottom: 28px;
+  padding-bottom: 24px;
   margin-bottom: 32px;
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, var(--navy) 0 55%, var(--ocean) 55% 75%, var(--coral) 75% 90%, var(--sunset) 90%) 1;
 }
 
 .masthead h1 {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
   margin: 0;
-  max-width: 14ch;
+  line-height: 0;
+}
+
+.logo {
+  display: block;
+  width: auto;
+  height: 150px;
 }
 
 .place {
@@ -142,7 +150,7 @@ a {
 }
 
 .month-name {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.05rem;
   margin: 0 0 12px;
@@ -183,7 +191,7 @@ a {
 }
 
 .cell .num {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.05rem;
   line-height: 1;
@@ -224,7 +232,7 @@ a {
 }
 
 .cell.in-range {
-  background: var(--citrus-soft);
+  background: var(--coral-soft);
   border-radius: 0;
 }
 
@@ -237,7 +245,7 @@ a {
 
 .cell.start .price,
 .cell.end .price {
-  color: var(--citrus-soft);
+  color: #ffd2c4;
 }
 
 .cell.end.booked .num {
@@ -305,7 +313,7 @@ a {
 
 .dates dd {
   margin: 0;
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
 }
 
@@ -383,7 +391,7 @@ a {
 
 .breakdown tfoot th,
 .breakdown tfoot td {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 700;
   font-size: 1.25rem;
   padding-top: 12px;
@@ -426,16 +434,16 @@ a {
   padding: 14px 18px;
   border: 0;
   border-radius: 4px;
-  background: var(--citrus);
-  color: var(--ink);
-  font-family: var(--display);
+  background: var(--navy);
+  color: var(--paper);
+  font-family: var(--body);
   font-weight: 700;
   font-size: 1.1rem;
   cursor: pointer;
 }
 
 .pay:hover:not(:disabled) {
-  background: #d99b1f;
+  background: var(--ocean);
 }
 
 .pay:disabled {
@@ -483,12 +491,12 @@ a {
 
 .status.ok h1,
 .status.ok h2 {
-  border-left: 8px solid var(--citrus);
+  border-left: 8px solid var(--coral);
   padding-left: 16px;
 }
 
 .big-dates {
-  font-family: var(--display);
+  font-family: var(--body);
   font-size: 1.4rem;
 }
 
@@ -705,12 +713,16 @@ a {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--citrus-soft);
-  color: var(--ink);
+  background: var(--ocean-soft);
+  color: var(--ocean);
+}
+
+.all-amenities li svg {
+  color: var(--ocean);
 }
 
 .amenities h3 {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.1rem;
   margin: 2px 0 2px;
@@ -729,7 +741,7 @@ a {
 }
 
 .all-amenities-title {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.1rem;
   margin: 0 0 16px;
@@ -795,7 +807,7 @@ a {
 }
 
 .score-number {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 700;
   font-size: 3.2rem;
   line-height: 1;
@@ -814,8 +826,8 @@ a {
 }
 
 .stars .on {
-  fill: var(--citrus);
-  stroke: #c58d17;
+  fill: var(--sunset);
+  stroke: var(--coral);
 }
 
 .stars .off {
@@ -947,7 +959,7 @@ a {
   list-style: none;
   margin: 0 0 16px;
   padding: 12px 14px;
-  background: var(--citrus-soft);
+  background: var(--coral-soft);
   border-radius: 4px;
   display: grid;
   gap: 4px;
@@ -957,7 +969,7 @@ a {
 
 .breakdown tr.discount td,
 .breakdown tr.discount th {
-  color: #2e6b4f;
+  color: var(--ocean);
 }
 
 .auth {
@@ -1019,7 +1031,7 @@ a {
 }
 
 .account h3 {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.2rem;
   margin: 32px 0 10px;
@@ -1045,7 +1057,7 @@ a {
 }
 
 .trip-dates {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 500;
   font-size: 1.1rem;
 }
@@ -1090,7 +1102,7 @@ a {
 }
 
 .admin-form legend {
-  font-family: var(--display);
+  font-family: var(--body);
   font-weight: 700;
   font-size: 1.15rem;
   padding: 0 6px;
@@ -1116,7 +1128,7 @@ a {
 }
 
 .field-input:focus-within {
-  outline: 3px solid var(--citrus);
+  outline: 3px solid var(--coral);
   outline-offset: 1px;
 }
 
@@ -1266,11 +1278,11 @@ a {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #2e8b57;
+  background: #2f8a5b;
 }
 
 .check.warn .check-dot {
-  background: var(--citrus);
+  background: var(--sunset);
 }
 
 .check.error .check-dot {
@@ -1287,5 +1299,134 @@ a {
   }
   .check span:last-child {
     grid-column: 2;
+  }
+}
+
+/* ---------- Admin: calendars, reviews, export ---------- */
+
+.wide-field,
+.wide {
+  grid-column: 1 / -1;
+}
+
+.admin-form textarea,
+.admin-form select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 0.92rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.admin-form select {
+  border: 0;
+}
+
+.admin-form textarea:focus-visible {
+  outline: 3px solid var(--coral);
+  outline-offset: 1px;
+}
+
+.export-box {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--coral);
+  border-radius: 6px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+}
+
+.export-box h2 {
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.export-box p {
+  margin: 0 0 12px;
+  max-width: 75ch;
+}
+
+.copy-field {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.copy-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  background: var(--mist);
+  color: var(--ink);
+}
+
+.copy-field button {
+  padding: 0 16px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-review-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.admin-review-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.admin-review-list li:last-child {
+  border-bottom: 0;
+}
+
+.admin-review-list p {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+}
+
+/* Cormorant reads small: give serif headings more size and weight */
+.calendar-head h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+.amenities h2,
+.reviews h2,
+.account h2,
+.account-head h2,
+.admin-title,
+.admin-section,
+.status h1,
+.status h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.amenities h2,
+.reviews h2 {
+  font-size: 2.4rem;
+}
+
+@media (max-width: 640px) {
+  .logo {
+    height: 104px;
   }
 }

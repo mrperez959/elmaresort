@@ -45,21 +45,22 @@ export async function createUser(input: {
   return rows[0] ? toPublic(rows[0]) : null; // null = email already registered
 }
 
-export async function insertBooking(b: {
-  userId: string;
-  hospitableId: string;
-  code: string;
-  squarePaymentId: string;
-  quote: Quote;
-}) {
+/** Saves a confirmed booking. Throws a pg error with code 23P01 if the nights overlap another one. */
+export async function insertBooking(b: { userId: string; code: string; squarePaymentId: string; quote: Quote }) {
   const q = b.quote;
-  await query(
-    `INSERT INTO bookings (user_id, hospitable_id, code, square_payment_id, check_in, check_out,
+  const rows = await query<{ id: string }>(
+    `INSERT INTO bookings (user_id, code, square_payment_id, check_in, check_out,
        adults, children, infants, pets, total_cents, quote)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-    [b.userId, b.hospitableId, b.code, b.squarePaymentId, q.checkIn, q.checkOut,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     RETURNING id`,
+    [b.userId, b.code, b.squarePaymentId, q.checkIn, q.checkOut,
      q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q)],
   );
+  return rows[0].id;
+}
+
+export async function cancelBooking(id: string) {
+  await query(`UPDATE bookings SET status = 'cancelled' WHERE id = $1`, [id]);
 }
 
 type BookingRow = {

@@ -1,6 +1,6 @@
 import { isAdmin, isJsonRequest } from "@/lib/auth";
 import { getSettings, saveSettings, SettingsError, validateSettings } from "@/lib/settings";
-import { clearCalendarCache } from "@/lib/hospitable";
+import { clearFeedCache } from "@/lib/ical";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function PUT(req: Request) {
   if (!isJsonRequest(req)) return Response.json({ error: "Unsupported request." }, { status: 415 });
   try {
     const settings = await saveSettings(validateSettings(await req.json()));
-    clearCalendarCache();
+    clearFeedCache();
     return Response.json({ settings });
   } catch (err) {
     if (err instanceof SettingsError) return Response.json({ error: err.message }, { status: 400 });

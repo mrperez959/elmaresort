@@ -1,10 +1,10 @@
 import "server-only";
-import { HospitableError } from "hospitable";
+import { randomBytes } from "node:crypto";
 import { square, cardDeclineMessage } from "./square";
-import { clearCalendarCache, hospitable } from "./hospitable";
 import { env } from "./env";
 import { quoteStay, QuoteError } from "./quote";
-import { insertBooking } from "./users";
+import { insertBooking, cancelBooking } from "./users";
+import { OVERLAP_ERROR } from "./db";
 import type { BookResult, PublicUser, StayRequest } from "./types";
 
 type BookInput = {
@@ -19,9 +19,11 @@ type BookInput = {
   expectedTotal: number;
 };
 
-/** Hospitable refused the reservation itself (dates taken, bad data). */
-function isRejection(err: unknown): boolean {
-  return err instanceof HospitableError && [400, 409, 422].includes(err.statusCode);
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
+
+function newCode(): string {
+  const bytes = randomBytes(8);
+  return "ER" + Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
 }
 
 async function voidPayment(paymentId: string) {
@@ -33,30 +35,34 @@ async function voidPayment(paymentId: string) {
   }
 }
 
+const TAKEN: BookResult = {
+  state: "released",
+  message: "Those dates were booked by someone else a moment ago. Your card was not charged and the hold was released.",
+};
+
 /**
  * Book a stay in one request:
- *   1. re-price the stay from fresh Hospitable data
- *   2. AUTHORIZE the card (autocomplete: false) -> nothing is charged yet
- *   3. create the manual reservation in Hospitable
+ *   1. re-check availability (fresh Airbnb/Vrbo calendars) and re-price
+ *   2. AUTHORIZE the card (autocomplete: false): nothing is charged yet
+ *   3. save the booking; the database refuses overlapping direct bookings
  *   4. only if that works, CAPTURE the payment
  * If anything after step 2 fails, the authorization is voided. If the server
- * dies mid-way, Square voids it on its own after 30 minutes (delayAction CANCEL).
+ * dies mid-way, Square voids it on its own after 30 minutes.
+ *
+ * Airbnb and Vrbo learn about the booking through the site's own calendar
+ * feed (/calendar/<token>.ics), which they re-import every few hours.
  */
 export async function bookStay({ stay, guest, sourceId, idempotencyKey, expectedTotal }: BookInput): Promise<BookResult> {
-  // 1. Price
+  // 1. Availability + price
   let quote;
   try {
-    quote = await quoteStay(stay, { fresh: true });
+    quote = await quoteStay(stay, { forBooking: true });
   } catch (err) {
     if (err instanceof QuoteError) return { state: "error", message: err.message };
     throw err;
   }
   if (quote.total !== expectedTotal) {
-    return {
-      state: "price_changed",
-      message: "The total for these dates just changed. Review it and pay again.",
-      quote,
-    };
+    return { state: "price_changed", message: "The total for these dates just changed. Review it and pay again.", quote };
   }
 
   // 2. Authorize
@@ -81,59 +87,20 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
   } catch (err) {
     const message = cardDeclineMessage(err);
     if (message) return { state: "declined", message };
-    // Unknown outcome (e.g. timeout): void anything this key may have created.
     await square().payments.cancelByIdempotencyKey({ idempotencyKey }).catch(() => undefined);
     throw err;
   }
 
-  // 3. Reserve
-  let reservationId: string;
-  let code: string;
+  // 3. Save (the exclusion constraint is the final double-booking guard)
+  const code = newCode();
+  let bookingId: string;
   try {
-    const reservation = await hospitable().reservations.create({
-      propertyId: env.propertyId(),
-      checkIn: quote.checkIn,
-      checkOut: quote.checkOut,
-      language: "en",
-      notes: `Direct booking from website. Square payment ${paymentId}.`,
-      guest: {
-        firstName: guest.firstName,
-        lastName: guest.lastName,
-        email: guest.email,
-        phone: guest.phone || undefined,
-      },
-      guests: { adults: quote.adults, children: quote.children, infants: quote.infants, pets: quote.pets },
-      financials: {
-        currency: "USD",
-        accommodation: quote.accommodation,
-        cleaningFee: quote.cleaningFee,
-        petFee: quote.petFee || undefined,
-        // Florida sales tax + county taxes you collect and remit yourself
-        passThroughTaxes: quote.tax,
-      },
-    });
-    reservationId = reservation.id;
-    code = reservation.code ?? reservation.id;
+    bookingId = await insertBooking({ userId: guest.id, code, squarePaymentId: paymentId, quote });
   } catch (err) {
     await voidPayment(paymentId);
-    if (isRejection(err)) {
-      console.warn(`[booking] Hospitable rejected ${quote.checkIn}..${quote.checkOut}`, err);
-      clearCalendarCache();
-      return {
-        state: "released",
-        message:
-          "Those dates were booked by someone else a moment ago. Your card was not charged and the hold was released.",
-      };
-    }
+    if ((err as { code?: string }).code === OVERLAP_ERROR) return TAKEN;
     throw err;
   }
-
-  // Save it for the guest's account page and the admin panel. A failure here
-  // doesn't undo the stay: it's already in Hospitable and paid.
-  const record = () =>
-    insertBooking({ userId: guest.id, hospitableId: reservationId, code, squarePaymentId: paymentId, quote }).catch(
-      (err) => console.error(`[booking] paid booking ${code} could not be saved to the database`, err),
-    );
 
   // 4. Capture
   try {
@@ -142,20 +109,13 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     // The capture may have gone through even if the response didn't reach us.
     const check = await square().payments.get({ paymentId }).catch(() => null);
     if (check?.payment?.status === "COMPLETED") {
-      clearCalendarCache();
-      await record();
       return { state: "confirmed", code, quote, firstName: guest.firstName };
     }
-    console.error(`[booking] capture failed for ${paymentId}; cancelling reservation ${reservationId}`, err);
-    await hospitable()
-      .reservations.cancel(reservationId, "host")
-      .catch((e) => console.error(`[booking] could not cancel reservation ${reservationId}`, e));
+    console.error(`[booking] capture failed for ${paymentId}; cancelling booking ${code}`, err);
+    await cancelBooking(bookingId).catch((e) => console.error(`[booking] could not cancel ${code}`, e));
     await voidPayment(paymentId);
-    clearCalendarCache();
     throw err;
   }
 
-  clearCalendarCache();
-  await record();
   return { state: "confirmed", code, quote, firstName: guest.firstName };
 }

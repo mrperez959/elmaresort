@@ -1,72 +1,47 @@
 import "server-only";
-import { AuthenticationError, NotFoundError, HospitableError } from "hospitable";
-import { hospitable, getDays } from "./hospitable";
+import { getFeed, feedLabel } from "./ical";
 import { getSettings } from "./settings";
 import { getReviews } from "./reviews";
-import { addDays, todayAtProperty } from "./dates";
+import { todayAtProperty } from "./dates";
 
 export type Check = { name: string; status: "ok" | "warn" | "error"; message: string };
-
-function hospitableProblem(err: unknown): string {
-  if (err instanceof AuthenticationError) {
-    return err.statusCode === 403
-      ? "The token doesn't have permission. Create one with read and write access in Hospitable (Apps → API access)."
-      : "Hospitable rejected the token. It may be expired or mistyped: create a new one in Apps → API access and update HOSPITABLE_API_PAT.";
-  }
-  if (err instanceof HospitableError) return `Hospitable answered with an error (HTTP ${err.statusCode}).`;
-  return `Couldn't reach Hospitable: ${(err as Error).message}`;
-}
 
 /** Plain-language status of every outside connection, for the admin panel. */
 export async function runChecks(): Promise<Check[]> {
   const checks: Check[] = [];
+  const settings = await getSettings();
+  const today = todayAtProperty();
 
-  // Hospitable: token, property, calendar
-  const token = process.env.HOSPITABLE_API_PAT;
-  const propertyId = process.env.HOSPITABLE_PROPERTY_ID;
-  if (!token || !propertyId) {
+  // Calendars
+  if (settings.icalUrls.length === 0) {
     checks.push({
-      name: "Hospitable",
+      name: "Calendars",
       status: "error",
-      message: `Missing ${!token ? "HOSPITABLE_API_PAT" : "HOSPITABLE_PROPERTY_ID"} in Vercel's environment variables. Without it the calendar can't load.`,
+      message: "No calendar links yet. Paste your Airbnb and Vrbo export links in the Calendars section below. Until then nobody can book.",
     });
-  } else {
+  }
+  for (const url of settings.icalUrls) {
+    const name = `${feedLabel(url)} calendar`;
     try {
-      const p = await hospitable().properties.get(propertyId);
-      checks.push({ name: "Hospitable", status: "ok", message: `Connected to "${p.publicName || p.name}".` });
-      try {
-        const today = todayAtProperty();
-        const days = await getDays(today, addDays(today, 60), { fresh: true });
-        const open = days.filter((d) => d.available).length;
-        checks.push(
-          open > 0
-            ? { name: "Calendar", status: "ok", message: `${open} of the next ${days.length} nights are open.` }
-            : {
-                name: "Calendar",
-                status: "warn",
-                message: `Hospitable returned ${days.length} days but none are open in the next 60 nights. Check for blocks in Hospitable.`,
-              },
-        );
-      } catch (err) {
-        checks.push({ name: "Calendar", status: "error", message: hospitableProblem(err) });
-      }
+      const feed = await getFeed(url, { forBooking: true });
+      const upcoming = feed.busy.filter((b) => b.end > today).length;
+      checks.push({
+        name,
+        status: "ok",
+        message: `Read ${feed.busy.length} blocked periods (${upcoming} upcoming).`,
+      });
     } catch (err) {
-      if (err instanceof NotFoundError) {
-        let list = "";
-        try {
-          const props = await hospitable().properties.list();
-          list = props.data.map((p) => `"${p.publicName || p.name}" = ${p.id}`).join("; ");
-        } catch {
-          /* ignore */
-        }
-        checks.push({
-          name: "Hospitable",
-          status: "error",
-          message: `The token works but HOSPITABLE_PROPERTY_ID doesn't match any property.${list ? ` Your properties: ${list}` : ""}`,
-        });
-      } else {
-        checks.push({ name: "Hospitable", status: "error", message: hospitableProblem(err) });
-      }
+      checks.push({ name, status: "error", message: (err as Error).message });
+    }
+  }
+  const labels = settings.icalUrls.map(feedLabel);
+  for (const needed of ["Airbnb", "Vrbo"]) {
+    if (settings.icalUrls.length && !labels.includes(needed)) {
+      checks.push({
+        name: needed,
+        status: "warn",
+        message: `No ${needed} calendar link. If the home is listed there, add it so its bookings block the site.`,
+      });
     }
   }
 
@@ -82,7 +57,6 @@ export async function runChecks(): Promise<Check[]> {
   );
 
   // Tax
-  const settings = await getSettings();
   checks.push(
     settings.taxRatePercent === null
       ? { name: "Tax rate", status: "error", message: "Not set. Online booking stays closed until you set it below." }
@@ -93,8 +67,8 @@ export async function runChecks(): Promise<Check[]> {
   const reviews = await getReviews();
   checks.push(
     reviews
-      ? { name: "Reviews", status: "ok", message: `${reviews.count} reviews, average ${reviews.average}.` }
-      : { name: "Reviews", status: "warn", message: "No reviews loaded. The section stays hidden on the site." },
+      ? { name: "Reviews", status: "ok", message: `${reviews.items.length} reviews on the site.` }
+      : { name: "Reviews", status: "warn", message: "None yet. Add your rating and some reviews below to show the section." },
   );
 
   return checks;

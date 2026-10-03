@@ -14,8 +14,6 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-const listFormat = new Intl.ListFormat("en-US", { style: "long", type: "conjunction" });
-
 function monthLabel(ym: string) {
   return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(`${ym}-15T12:00:00Z`),
@@ -46,22 +44,24 @@ function ReviewCard({ review }: { review: PublicReview }) {
 
 export function Reviews({ summary }: { summary: ReviewSummary }) {
   const [shown, setShown] = useState(6);
-  const average = summary.average.toFixed(summary.average % 1 === 0 ? 1 : 2).replace(/0$/, "");
+  const avg = summary.average;
 
   return (
     <section className="reviews" aria-labelledby="reviews-heading">
       <div className="reviews-head">
         <h2 id="reviews-heading">What guests say</h2>
-        <div className="score">
-          <span className="score-number">{average}</span>
-          <div>
-            <Stars rating={summary.average} />
-            <div className="score-count">
-              from {summary.count} {summary.count === 1 ? "review" : "reviews"}
-              {summary.platforms.length ? ` on ${listFormat.format(summary.platforms)}` : ""}
+        {avg !== null && (
+          <div className="score">
+            <span className="score-number">{Number.isInteger(avg) ? avg.toFixed(1) : String(avg)}</span>
+            <div>
+              <Stars rating={avg} />
+              <div className="score-count">
+                {summary.count ? `${summary.count} ${summary.count === 1 ? "review" : "reviews"} on ` : "Rating on "}
+                {summary.platform}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
       {summary.items.length > 0 && (
         <>

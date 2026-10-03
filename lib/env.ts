@@ -10,8 +10,6 @@ function required(name: string): string {
 
 // Prices, fees, discounts and limits live in the database (edited at /admin).
 export const env = {
-  hospitableToken: () => required("HOSPITABLE_API_PAT"),
-  propertyId: () => required("HOSPITABLE_PROPERTY_ID"),
   squareAccessToken: () => required("SQUARE_ACCESS_TOKEN"),
   squareLocationId: () => required("NEXT_PUBLIC_SQUARE_LOCATION_ID"),
   squareProduction: () => required("NEXT_PUBLIC_SQUARE_ENVIRONMENT") === "production",

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: process.env.NEXT_PUBLIC_PROPERTY_TAGLINE ?? "Book directly with the host.",
 };
 
-export const viewport: Viewport = { themeColor: "#12332d" };
+export const viewport: Viewport = { themeColor: "#01325b" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&display=swap"
         />
       </head>
       <body>{children}</body>

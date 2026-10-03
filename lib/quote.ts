@@ -1,5 +1,5 @@
 import "server-only";
-import { getDays, type Day } from "./hospitable";
+import { getDays, type Day } from "./availability";
 import { getSettings } from "./settings";
 import { isISODate, nightsBetween, nightsOf, todayAtProperty } from "./dates";
 import { isWeekendNight, weekendRate } from "./pricing";
@@ -144,7 +144,7 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
 }
 
 /** Fetch the calendar and settings for the stay and price it. */
-export async function quoteStay(stay: StayRequest, opts: { fresh?: boolean } = {}): Promise<Quote> {
+export async function quoteStay(stay: StayRequest, opts: { forBooking?: boolean } = {}): Promise<Quote> {
   const s = await getSettings();
   if (!isISODate(stay.checkIn) || !isISODate(stay.checkOut) || stay.checkOut <= stay.checkIn) {
     throw new QuoteError("invalid", "Check-out must be after check-in.");

@@ -1,6 +1,6 @@
 import "server-only";
-import { hospitable } from "./hospitable";
-import { env } from "./env";
+import { query } from "./db";
+import { getSettings } from "./settings";
 
 export type PublicReview = {
   id: string;
@@ -13,79 +13,54 @@ export type PublicReview = {
 };
 
 export type ReviewSummary = {
-  average: number;
-  count: number;
-  /** platforms the reviews came from, most reviews first */
-  platforms: string[];
+  /** Overall rating copied from the listing, or null if not entered */
+  average: number | null;
+  count: number | null;
+  platform: string;
   items: PublicReview[];
 };
 
-const PLATFORMS: Record<string, string> = {
-  airbnb: "Airbnb",
-  homeaway: "Vrbo",
-  vrbo: "Vrbo",
-  booking: "Booking.com",
-  "booking.com": "Booking.com",
-  direct: "Direct booking",
-  manual: "Direct booking",
-};
+type Row = { id: string; name: string; month: string; platform: string; rating: number; body: string };
 
-const CACHE_MS = 60 * 60_000; // reviews change slowly
-const MAX_SHOWN = 24;
-const shared = globalThis as unknown as { __elmaReviews?: { at: number; value: ReviewSummary | null } };
+export async function listReviews(): Promise<PublicReview[]> {
+  const rows = await query<Row>("SELECT * FROM reviews ORDER BY month DESC, created_at DESC LIMIT 200");
+  return rows.map((r) => ({ id: r.id, name: r.name, month: r.month, platform: r.platform, rating: r.rating, text: r.body }));
+}
 
-/**
- * Real guest reviews from every platform connected to Hospitable.
- * The average and count use ALL reviews; the cards show the most recent
- * ones that have text, whatever their rating.
- */
+/** Reviews entered in /admin plus the overall rating from the listing. Null if there's nothing to show. */
 export async function getReviews(): Promise<ReviewSummary | null> {
-  const hit = shared.__elmaReviews;
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.value;
+  const [settings, items] = await Promise.all([getSettings(), listReviews()]);
+  if (!items.length && settings.reviewsAverage === null) return null;
+  return {
+    average: settings.reviewsAverage,
+    count: settings.reviewsCount,
+    platform: settings.reviewsPlatform,
+    items,
+  };
+}
 
-  try {
-    const all = [];
-    for await (const r of hospitable().reviews.iter(env.propertyId(), { include: "guest", perPage: 100 })) {
-      all.push(r);
-      if (all.length >= 1000) break;
-    }
-    const rated = all.filter((r) => r.public?.rating >= 1);
-    const value: ReviewSummary | null = rated.length
-      ? {
-          average: Math.round((rated.reduce((sum, r) => sum + r.public.rating, 0) / rated.length) * 100) / 100,
-          count: rated.length,
-          platforms: Object.entries(
-            rated.reduce<Record<string, number>>((acc, r) => {
-              const name = PLATFORMS[r.platform?.toLowerCase()] ?? r.platform;
-              acc[name] = (acc[name] ?? 0) + 1;
-              return acc;
-            }, {}),
-          )
-            .sort((a, b) => b[1] - a[1])
-            .map(([name]) => name),
-          items: rated
-            .filter((r) => r.public.review?.trim())
-            .sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt))
-            .slice(0, MAX_SHOWN)
-            .map((r) => ({
-              id: r.id,
-              // First name and last initial only, for the guest's privacy.
-              name: r.guest
-                ? `${r.guest.firstName}${r.guest.lastName ? ` ${r.guest.lastName.charAt(0)}.` : ""}`
-                : "Guest",
-              month: r.reviewedAt.slice(0, 7),
-              platform: PLATFORMS[r.platform?.toLowerCase()] ?? r.platform,
-              rating: r.public.rating,
-              text: r.public.review.trim(),
-            })),
-        }
-      : null;
-    shared.__elmaReviews = { at: Date.now(), value };
-    return value;
-  } catch (err) {
-    console.error("[reviews]", err);
-    // Remember the failure briefly so a Hospitable outage doesn't slow every page.
-    shared.__elmaReviews = { at: Date.now() - CACHE_MS + 5 * 60_000, value: null };
-    return null;
-  }
+export class ReviewError extends Error {}
+
+export async function addReview(raw: unknown): Promise<PublicReview> {
+  const b = (raw ?? {}) as Record<string, unknown>;
+  const name = String(b.name ?? "").trim().slice(0, 60);
+  const month = String(b.month ?? "").trim();
+  const platform = String(b.platform ?? "").trim().slice(0, 40) || "Airbnb";
+  const rating = Number(b.rating);
+  const text = String(b.text ?? "").trim().slice(0, 3000);
+  if (!name) throw new ReviewError("Enter the guest's name as it appears on the platform.");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new ReviewError("Pick the month of the review.");
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new ReviewError("The rating must be 1 to 5 stars.");
+  if (text.length < 5) throw new ReviewError("Paste the review text.");
+  const rows = await query<Row>(
+    "INSERT INTO reviews (name, month, platform, rating, body) VALUES ($1,$2,$3,$4,$5) RETURNING *",
+    [name, month, platform, rating, text],
+  );
+  const r = rows[0];
+  return { id: r.id, name: r.name, month: r.month, platform: r.platform, rating: r.rating, text: r.body };
+}
+
+export async function deleteReview(id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+  await query("DELETE FROM reviews WHERE id = $1", [id]);
 }

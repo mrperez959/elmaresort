@@ -12,7 +12,17 @@ export function SiteHeader({ user, showTagline = true }: { user: PublicUser | nu
       </nav>
       <header className="masthead">
         <h1>
-          <Link href="/">{name}</Link>
+          <Link href="/" aria-label={`${name}, home`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="logo"
+              src="/logo-360.webp"
+              srcSet="/logo-360.webp 1x, /logo-720.webp 2x"
+              alt={name}
+              width={360}
+              height={296}
+            />
+          </Link>
         </h1>
         {showTagline && (
           <p className="place">

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS bookings (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id            uuid NOT NULL REFERENCES users(id),
-  hospitable_id      text NOT NULL,
+  hospitable_id      text,
   code               text NOT NULL,
   square_payment_id  text NOT NULL,
   check_in           date NOT NULL,
@@ -51,6 +51,29 @@ CREATE TABLE IF NOT EXISTS bookings (
 
 CREATE INDEX IF NOT EXISTS bookings_user_idx ON bookings (user_id, check_in DESC);
 CREATE INDEX IF NOT EXISTS bookings_created_idx ON bookings (created_at DESC);
+
+-- Older installs required a Hospitable reservation id; direct bookings no longer have one.
+ALTER TABLE bookings ALTER COLUMN hospitable_id DROP NOT NULL;
+
+-- The database itself refuses two confirmed direct bookings on the same nights,
+-- even if two guests pay at the same second.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'bookings_no_overlap') THEN
+    ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
+      EXCLUDE USING gist (daterange(check_in, check_out) WITH &&) WHERE (status = 'confirmed');
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        text NOT NULL,
+  month       text NOT NULL,
+  platform    text NOT NULL,
+  rating      int NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  body        text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
 `;
 
 /** Creates the tables on first use. Safe to run any number of times. */
@@ -72,3 +95,6 @@ export async function query<T extends QueryResultRow>(text: string, params: unkn
   const result = await pool().query<T>(text, params);
   return result.rows;
 }
+
+/** Postgres error code for an exclusion-constraint violation (overlapping dates). */
+export const OVERLAP_ERROR = "23P01";

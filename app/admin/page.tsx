@@ -1,4 +1,7 @@
-import { AdminLogin, AdminSettings } from "@/components/Admin";
+import { headers } from "next/headers";
+import { AdminLogin, AdminReviews, AdminSettings, CopyField } from "@/components/Admin";
+import { listReviews } from "@/lib/reviews";
+import { exportToken } from "@/lib/calendar-export";
 import { SignOutButton } from "@/components/AuthPanel";
 import { isAdmin } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -19,7 +22,16 @@ export default async function Admin() {
     );
   }
 
-  const [settings, bookings, checks] = await Promise.all([getSettings(), recentBookings(), runChecks()]);
+  const [settings, bookings, checks, reviews, h] = await Promise.all([
+    getSettings(),
+    recentBookings(),
+    runChecks(),
+    listReviews(),
+    headers(),
+  ]);
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const exportUrl = `${proto}://${host}/calendar/${exportToken()}.ics`;
 
   return (
     <main className="page admin">
@@ -40,7 +52,23 @@ export default async function Admin() {
         </ul>
       </section>
 
+      <section className="export-box" aria-labelledby="export-heading">
+        <h2 id="export-heading" className="admin-section first">Block direct bookings on Airbnb and Vrbo</h2>
+        <p>
+          Paste this link once in Airbnb (Availability → Connect calendars → Import calendar) and in Vrbo (Calendar →
+          Import/Export → Import). Every booking made on this website then blocks those dates there.
+        </p>
+        <CopyField value={exportUrl} />
+        <p className="field-hint">
+          Airbnb and Vrbo re-read this link every few hours, not instantly. When you get a direct booking, block the dates
+          in Hospitable right away to be safe. Keep this link private.
+        </p>
+      </section>
+
       <AdminSettings initial={settings} />
+
+      <h2 className="admin-section">Reviews</h2>
+      <AdminReviews initial={reviews} />
 
       <h2 className="admin-section">Direct bookings</h2>
       {bookings.length === 0 ? (
