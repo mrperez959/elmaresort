@@ -28,7 +28,9 @@ export async function POST(req: Request) {
     return reply(result, result.state === "confirmed" ? 200 : 409);
   } catch (err) {
     if (err instanceof QuoteError) return reply({ state: "error", message: err.message }, 400);
-    console.error("[book]", err);
+    // Log the provider's own error details (Square puts them in `errors`).
+    const details = (err as { errors?: unknown; statusCode?: number }) ?? {};
+    console.error("[book] failed", details.statusCode ?? "", JSON.stringify(details.errors ?? null), err);
     return reply(
       {
         state: "error",

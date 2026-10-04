@@ -9,7 +9,10 @@ function pool(): Pool {
   if (!globalForDb.__elmaPool) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("Missing environment variable DATABASE_URL. See .env.example.");
-    globalForDb.__elmaPool = new Pool({ connectionString: url, max: 3 });
+    // pg warns that "sslmode=require" will change meaning in v9; ask for the
+    // strict mode it already uses today (Neon supports it) so behavior stays the same.
+    const connectionString = url.replace(/sslmode=(prefer|require|verify-ca)\b/, "sslmode=verify-full");
+    globalForDb.__elmaPool = new Pool({ connectionString, max: 3 });
   }
   return globalForDb.__elmaPool;
 }
