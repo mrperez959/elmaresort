@@ -1997,7 +1997,8 @@ a {
 .map-circle {
   position: absolute;
   left: 50%;
-  top: 50%;
+  /* Same vertical spot as the house marker, so the house sits in the middle. */
+  top: calc(50% - 21px);
   width: min(34%, 240px);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
@@ -2018,4 +2019,40 @@ a {
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(1, 50, 91, 0.18);
   pointer-events: none;
+}
+
+/* With the circle and house on top, the map can't be dragged (they'd drift off). */
+.map-frame iframe.map-static {
+  pointer-events: none;
+}
+
+.map-house {
+  position: absolute;
+  left: 50%;
+  /* Google's pin has its tip on the center point and is about 43px tall. */
+  top: calc(50% - 21px);
+  width: 50px;
+  height: 50px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--navy);
+  color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(1, 50, 91, 0.35);
+  pointer-events: none;
+}
+
+.map-open {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: -20px;
+}
+
+@media (max-width: 860px) {
+  .map-open {
+    grid-column: 1;
+    margin-top: 0;
+  }
 }
