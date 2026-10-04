@@ -106,14 +106,21 @@ export async function runChecks(): Promise<Check[]> {
       checks.push({ name: "Email", status: "error", message: `The email server refused the login: ${(err as Error).message}` });
     }
   }
+  const twoStep = process.env.ADMIN_2FA === "on";
   checks.push(
-    process.env.ADMIN_EMAIL
-      ? { name: "Admin security", status: "ok", message: `Sign-in codes and new-booking alerts go to ${process.env.ADMIN_EMAIL}.` }
-      : {
+    !process.env.ADMIN_EMAIL
+      ? {
           name: "Admin security",
           status: "warn",
-          message: "Set ADMIN_EMAIL to require an emailed code when signing in here and to get an email for every direct booking.",
-        },
+          message: "Set ADMIN_EMAIL to get an email for every direct booking (and, optionally, sign-in codes).",
+        }
+      : twoStep
+        ? { name: "Admin security", status: "ok", message: `Sign-in codes and booking alerts go to ${process.env.ADMIN_EMAIL}.` }
+        : {
+            name: "Admin security",
+            status: "warn",
+            message: `Booking alerts go to ${process.env.ADMIN_EMAIL}. Sign-in codes are off: once Email is green, add ADMIN_2FA=on in Vercel and redeploy.`,
+          },
   );
   checks.push(
     settings.propertyAddress

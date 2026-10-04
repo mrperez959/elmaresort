@@ -17,9 +17,11 @@ export async function POST(req: Request) {
   }
   await reset(`admin-login:${ip}`);
 
-  // Second step: a code sent to ADMIN_EMAIL, when email is set up.
+  // Optional second step: a code sent to ADMIN_EMAIL. Only when ADMIN_2FA=on,
+  // so a broken email setup can never lock the owner out of the panel.
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail && (mailConfigured() || process.env.NODE_ENV !== "production")) {
+  const twoStep = process.env.ADMIN_2FA === "on";
+  if (twoStep && adminEmail && (mailConfigured() || process.env.NODE_ENV !== "production")) {
     try {
       await sendCode(adminEmail, "admin", ip);
     } catch (err) {

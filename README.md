@@ -111,7 +111,7 @@ Agrega las recientes a medida que llegan, no solo las mejores. Presentar solo la
 - **Email verificado:** al registrarse llega un **código de 6 dígitos** por email. Sin confirmarlo no se puede pagar, ni cambiar o cancelar viajes. El código vence en 15 minutos, admite 5 intentos y se guarda cifrado.
 - **¿Olvidaste tu contraseña?:** se recupera con un código por email. Al cambiarla se cierran las sesiones en todos los demás dispositivos.
 
-**Panel de admin:** contraseña más un código enviado a `ADMIN_EMAIL`. A ese mismo email llega un aviso por cada reserva directa, para que bloquees las fechas en Hospitable enseguida.
+**Panel de admin:** contraseña y, si pones `ADMIN_2FA=on`, también un código enviado a `ADMIN_EMAIL`. Actívalo solo cuando el correo funcione (Connections → Email en verde), para no quedarte fuera. A `ADMIN_EMAIL` llega además un aviso por cada reserva directa, para que bloquees las fechas en Hospitable enseguida.
 
 **Protecciones:**
 - **Inyección SQL:** todas las consultas usan parámetros (`$1, $2…`) y ningún dato del usuario se pega dentro del SQL.
@@ -155,7 +155,7 @@ npm run dev
 - [ ] Connections en verde para calendarios, Square, Email e impuestos.
 - [ ] Crear una cuenta: llega el código, se confirma y luego se puede pagar.
 - [ ] "Forgot your password?" funciona.
-- [ ] Entrar a `/admin` pide el código enviado a `ADMIN_EMAIL`.
+- [ ] Con `ADMIN_2FA=on`, entrar a `/admin` pide el código enviado a `ADMIN_EMAIL`.
 - [ ] Una noche reservada en Airbnb aparece tachada en la web en menos de 5 minutos.
 - [ ] Una reserva de prueba en la web aparece en `/admin`, en `/account` del huésped y, horas después, bloqueada en Airbnb y Vrbo.
 - [ ] Tarjeta rechazada: mensaje claro y ninguna reserva creada.
