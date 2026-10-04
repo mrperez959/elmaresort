@@ -421,10 +421,10 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           <span className="field-hint">
             In Google Maps, right-click a spot a few blocks from the house (on the water or a nearby street, not the
             house itself) and click the numbers at the top of the menu to copy them. Paste here. The site rounds them
-            to about 100 m and shows a circle, like Airbnb. Leave empty to center on the area name.
+            to about 100 m and puts a house marker there. Leave empty to center on the area name.
           </span>
         </label>
-        <Field label="Map zoom" hint="14 = neighborhood, 15 = closer, 13 = wider" value={form.mapZoom} onChange={set("mapZoom")} />
+        <Field label="Map zoom" hint="15 = the canals around the house, 14 = wider, 16 = closer" value={form.mapZoom} onChange={set("mapZoom")} />
       </fieldset>
 
       <fieldset>

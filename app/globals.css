@@ -1955,10 +1955,11 @@ a {
 
 .map-frame {
   position: relative;
-  border-radius: 6px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--line);
   aspect-ratio: 16 / 9;
+  box-shadow: 0 2px 10px rgba(1, 50, 91, 0.08);
   background: var(--ocean-soft);
 }
 
@@ -1999,12 +2000,12 @@ a {
   left: 50%;
   /* Same vertical spot as the house marker, so the house sits in the middle. */
   top: calc(50% - 21px);
-  width: min(34%, 240px);
+  width: 96px;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: rgba(254, 107, 81, 0.22);
-  border: 2px solid var(--coral);
+  background: rgba(254, 107, 81, 0.18);
+  border: 1.5px solid rgba(254, 107, 81, 0.6);
   pointer-events: none;
 }
 
@@ -2031,13 +2032,13 @@ a {
   left: 50%;
   /* Google's pin has its tip on the center point and is about 43px tall. */
   top: calc(50% - 21px);
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--navy);
+  background: var(--coral);
   color: #fff;
   border: 3px solid #fff;
   box-shadow: 0 3px 10px rgba(1, 50, 91, 0.35);

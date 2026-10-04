@@ -35,7 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   checkInInstructions: "",
   approxArea: "Town 'n' Country, Tampa, FL",
   mapCenter: "",
-  mapZoom: 14,
+  mapZoom: 15,
 };
 
 export class SettingsError extends Error {}
