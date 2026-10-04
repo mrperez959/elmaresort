@@ -32,9 +32,11 @@ export function AreaMap({ area, center, zoom }: { area: string; center: string; 
         {center && (
           <>
             <span className="map-circle" aria-hidden="true" />
-            {/* Sits exactly over Google's red pin so only the house shows. */}
-            <span className="map-house" aria-hidden="true">
-              <House size={24} strokeWidth={2} />
+            {/* A map pin whose tip is on the point; it also covers Google's red pin. */}
+            <span className="map-pin" aria-hidden="true">
+              <span className="map-pin-head">
+                <House size={22} strokeWidth={2.2} />
+              </span>
             </span>
             <span className="map-caption">Approximate location</span>
           </>

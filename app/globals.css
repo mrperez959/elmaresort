@@ -1998,9 +1998,8 @@ a {
 .map-circle {
   position: absolute;
   left: 50%;
-  /* Same vertical spot as the house marker, so the house sits in the middle. */
-  top: calc(50% - 21px);
-  width: 96px;
+  top: 50%;
+  width: 70px;
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
@@ -2027,22 +2026,36 @@ a {
   pointer-events: none;
 }
 
-.map-house {
+/* Pin: tip exactly on the map center (where Google draws its own pin). */
+.map-pin {
   position: absolute;
   left: 50%;
-  /* Google's pin has its tip on the center point and is about 43px tall. */
-  top: calc(50% - 21px);
-  width: 48px;
-  height: 48px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(1, 50, 91, 0.35));
+}
+
+.map-pin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--coral);
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg) translate(1px, -1px);
+  transform-origin: center;
+}
+
+.map-pin-head {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  background: var(--coral);
   color: #fff;
-  border: 3px solid #fff;
-  box-shadow: 0 3px 10px rgba(1, 50, 91, 0.35);
-  pointer-events: none;
+  padding-bottom: 6px;
 }
 
 .map-open {
