@@ -52,7 +52,7 @@ export default async function Home() {
         maxPets={settings.maxPets}
         petFee={settings.petFee}
       />
-      <AreaMap area={settings.approxArea} />
+      <AreaMap area={settings.approxArea} center={settings.mapCenter} zoom={settings.mapZoom} />
       <section id="book" aria-label="Book your stay">
         <Suspense fallback={<p className="notice">Loading…</p>}>
           <BookingWidget settings={toPublicSettings(settings)} />

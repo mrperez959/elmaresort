@@ -56,8 +56,11 @@ export type Settings = {
   propertyAddress: string;
   /** PRIVATE: door code, parking, wifi... same visibility as the address */
   checkInInstructions: string;
-  /** Public, approximate: what the map on the home page centers on */
+  /** Public, approximate: area name shown next to the map */
   approxArea: string;
+  /** Public, approximate: "lat, lng" of a point NEAR the house (not the house). "" = center on approxArea */
+  mapCenter: string;
+  mapZoom: number;
 };
 
 export type PublicSettings = {

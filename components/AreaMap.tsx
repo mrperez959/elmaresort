@@ -1,8 +1,12 @@
 import { MapPin } from "lucide-react";
 
-/** Public map of the general area only. The exact address is never sent to the browser here. */
-export function AreaMap({ area }: { area: string }) {
-  const src = `https://maps.google.com/maps?q=${encodeURIComponent(area)}&z=13&output=embed`;
+/**
+ * Public map of the general area only. The center is an approximate point the
+ * owner picks near the house (never the address), with a circle on top.
+ */
+export function AreaMap({ area, center, zoom }: { area: string; center: string; zoom: number }) {
+  const q = center ? center.replace(/\s+/g, "") : area;
+  const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`;
   return (
     <section className="area-map" aria-labelledby="map-heading">
       <div className="area-text">
@@ -23,6 +27,12 @@ export function AreaMap({ area }: { area: string }) {
           referrerPolicy="no-referrer-when-downgrade"
           sandbox="allow-scripts allow-same-origin allow-popups"
         />
+        {center && (
+          <>
+            <span className="map-circle" aria-hidden="true" />
+            <span className="map-caption">Approximate location</span>
+          </>
+        )}
       </div>
     </section>
   );

@@ -110,7 +110,7 @@ function fromForm(f: Form): Record<string, unknown> {
     if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy") out[k] = v;
     else if (k === "taxesConfigured") continue;
     else if (
-      ["contactWhatsApp", "contactPhone", "contactEmail", "propertyAddress", "checkInInstructions", "approxArea"].includes(k)
+      ["contactWhatsApp", "contactPhone", "contactEmail", "propertyAddress", "checkInInstructions", "approxArea", "mapCenter"].includes(k)
     )
       out[k] = v;
     else if (k === "taxes") {
@@ -411,8 +411,20 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           <span className="field-input">
             <input value={form.approxArea} onChange={(e) => set("approxArea")(e.target.value)} />
           </span>
-          <span className="field-hint">A neighborhood or area, never the street address. The map centers on it.</span>
+          <span className="field-hint">A neighborhood or area name shown next to the map, never the street address.</span>
         </label>
+        <label className="field wide-field">
+          <span className="field-label">Map center (approximate)</span>
+          <span className="field-input">
+            <input value={form.mapCenter} placeholder="28.012, -82.570" onChange={(e) => set("mapCenter")(e.target.value)} />
+          </span>
+          <span className="field-hint">
+            In Google Maps, right-click a spot a few blocks from the house (on the water or a nearby street, not the
+            house itself) and click the numbers at the top of the menu to copy them. Paste here. The site rounds them
+            to about 100 m and shows a circle, like Airbnb. Leave empty to center on the area name.
+          </span>
+        </label>
+        <Field label="Map zoom" hint="14 = neighborhood, 15 = closer, 13 = wider" value={form.mapZoom} onChange={set("mapZoom")} />
       </fieldset>
 
       <fieldset>

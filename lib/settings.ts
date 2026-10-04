@@ -34,6 +34,8 @@ export const DEFAULT_SETTINGS: Settings = {
   propertyAddress: "",
   checkInInstructions: "",
   approxArea: "Town 'n' Country, Tampa, FL",
+  mapCenter: "",
+  mapZoom: 14,
 };
 
 export class SettingsError extends Error {}
@@ -83,6 +85,20 @@ function phone(v: unknown, label: string): string {
   const digits = raw.replace(/[^\d+]/g, "");
   if (!/^\+?\d{10,15}$/.test(digits)) throw new SettingsError(`${label}: use the full number with country code, e.g. +1 813 555 0100.`);
   return digits.startsWith("+") ? digits : `+${digits.length === 10 ? "1" + digits : digits}`;
+}
+
+/** "28.01, -82.57" style coordinates, as copied from Google Maps. */
+function latLng(v: unknown): string {
+  const raw = String(v ?? "").trim();
+  if (!raw) return "";
+  const m = /^\(?\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*\)?$/.exec(raw);
+  const lat = m ? Number(m[1]) : NaN;
+  const lng = m ? Number(m[2]) : NaN;
+  if (!m || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    throw new SettingsError("Map center: paste coordinates like 28.0123, -82.5678 (right-click the map in Google Maps).");
+  }
+  // 3 decimals is about 100 m: plenty for an area map, never a house.
+  return `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
 }
 
 function email(v: unknown): string {
@@ -171,6 +187,8 @@ export function validateSettings(raw: unknown): Settings {
     propertyAddress: String(input.propertyAddress ?? "").trim().slice(0, 300),
     checkInInstructions: String(input.checkInInstructions ?? "").trim().slice(0, 4000),
     approxArea: String(input.approxArea ?? "").trim().slice(0, 120) || DEFAULT_SETTINGS.approxArea,
+    mapCenter: latLng(input.mapCenter),
+    mapZoom: int(input, "mapZoom", 11, 16),
   };
   if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {
