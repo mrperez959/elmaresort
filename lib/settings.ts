@@ -97,8 +97,8 @@ function latLng(v: unknown): string {
   if (!m || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
     throw new SettingsError("Map center: paste coordinates like 28.0123, -82.5678 (right-click the map in Google Maps).");
   }
-  // 3 decimals is about 100 m: plenty for an area map, never a house.
-  return `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+  // Kept as the owner entered it (up to 6 decimals): the owner picks the point to show.
+  return `${Number(lat.toFixed(6))}, ${Number(lng.toFixed(6))}`;
 }
 
 function email(v: unknown): string {
