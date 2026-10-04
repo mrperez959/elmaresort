@@ -1,8 +1,12 @@
 import { parseStayRequest, quoteStay, QuoteError } from "@/lib/quote";
+import { allow, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  if (!(await allow(`quote:${clientIp(req)}`, 120, 60))) {
+    return Response.json({ error: "Too many requests. Wait a moment." }, { status: 429 });
+  }
   try {
     const stay = parseStayRequest(await req.json().catch(() => null));
     const quote = await quoteStay(stay);

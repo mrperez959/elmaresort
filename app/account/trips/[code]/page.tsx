@@ -17,12 +17,13 @@ const hourLabel = (h: number) => new Intl.DateTimeFormat("en-US", { hour: "numer
 
 export default async function TripPage({ params }: { params: Promise<{ code: string }> }) {
   const user = await currentUser();
-  if (!user) redirect("/account");
+  if (!user || !user.emailVerified) redirect("/account");
   const { code } = await params;
   const [trip, settings] = await Promise.all([getTrip(code, user.id), getSettings()]);
   if (!trip) notFound();
 
   const q = trip.quote;
+  const today = todayAtProperty();
   const changeable = canChange(trip);
   const refund = changeable ? refundNow(trip) : null;
   const guests = q.adults + q.children;
@@ -73,6 +74,29 @@ export default async function TripPage({ params }: { params: Promise<{ code: str
               </div>
             )}
           </dl>
+
+          <h2 className="invoice-heading">Address and check-in</h2>
+          {trip.status !== "confirmed" ? (
+            <p className="fine">Not available for cancelled trips.</p>
+          ) : today >= q.checkIn && today <= q.checkOut && settings.propertyAddress ? (
+            <div className="arrival">
+              <p className="arrival-address">{settings.propertyAddress}</p>
+              <a
+                className="manage-link"
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(settings.propertyAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Directions in Google Maps
+              </a>
+              {settings.checkInInstructions && <p className="arrival-notes">{settings.checkInInstructions}</p>}
+            </div>
+          ) : (
+            <p>
+              The exact address and check-in instructions appear here on <strong>{longDate(q.checkIn)}</strong>, your
+              check-in day. Until then you can see the area on the map on our home page.
+            </p>
+          )}
 
           <h2 className="invoice-heading">Receipt</h2>
           <FullInvoice quote={q} />

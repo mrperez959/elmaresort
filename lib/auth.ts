@@ -30,7 +30,7 @@ const ADMIN_COOKIE = "er_admin";
 const GUEST_DAYS = 30;
 const ADMIN_HOURS = 12;
 
-type Session = { sub: string; role: "guest" | "admin"; exp: number };
+type Session = { sub: string; role: "guest" | "admin" | "admin-pending"; exp: number; v?: number };
 
 function secret(): string {
   const s = process.env.SESSION_SECRET;
@@ -70,9 +70,9 @@ async function setCookie(name: string, value: string, maxAgeSeconds: number) {
   });
 }
 
-export async function startGuestSession(userId: string) {
+export async function startGuestSession(userId: string, sessionVersion: number) {
   const exp = Date.now() + GUEST_DAYS * 86_400_000;
-  await setCookie(GUEST_COOKIE, sign({ sub: userId, role: "guest", exp }), GUEST_DAYS * 86_400);
+  await setCookie(GUEST_COOKIE, sign({ sub: userId, role: "guest", exp, v: sessionVersion }), GUEST_DAYS * 86_400);
 }
 
 export async function endGuestSession() {
@@ -83,7 +83,11 @@ export async function endGuestSession() {
 export async function currentUser(): Promise<PublicUser | null> {
   const session = verify((await cookies()).get(GUEST_COOKIE)?.value, "guest");
   if (!session) return null;
-  return findUserById(session.sub);
+  const user = await findUserById(session.sub);
+  // A password reset bumps the version and signs out every old session.
+  if (!user || (session.v ?? 1) !== user.sessionVersion) return null;
+  const { sessionVersion: _v, ...publicUser } = user;
+  return publicUser;
 }
 
 // ---------- Admin ----------
@@ -98,7 +102,20 @@ export function adminPasswordMatches(password: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+const ADMIN_PENDING_COOKIE = "er_admin_pending";
+
+/** Password was right; waiting for the emailed code. */
+export async function startAdminPending() {
+  const exp = Date.now() + 10 * 60_000;
+  await setCookie(ADMIN_PENDING_COOKIE, sign({ sub: "admin", role: "admin-pending", exp }), 600);
+}
+
+export async function adminPending(): Promise<boolean> {
+  return verify((await cookies()).get(ADMIN_PENDING_COOKIE)?.value, "admin-pending") !== null;
+}
+
 export async function startAdminSession() {
+  (await cookies()).delete(ADMIN_PENDING_COOKIE);
   const exp = Date.now() + ADMIN_HOURS * 3_600_000;
   await setCookie(ADMIN_COOKIE, sign({ sub: "admin", role: "admin", exp }), ADMIN_HOURS * 3_600);
 }
@@ -111,31 +128,18 @@ export async function isAdmin(): Promise<boolean> {
   return verify((await cookies()).get(ADMIN_COOKIE)?.value, "admin") !== null;
 }
 
-// ---------- Brute-force brake (best effort, per server instance) ----------
-
-const attempts = new Map<string, { count: number; until: number }>();
-
-export function tooManyAttempts(key: string): boolean {
-  const a = attempts.get(key);
-  return Boolean(a && a.count >= 8 && a.until > Date.now());
-}
-
-export function recordFailedAttempt(key: string) {
-  const a = attempts.get(key);
-  if (!a || a.until < Date.now()) attempts.set(key, { count: 1, until: Date.now() + 15 * 60_000 });
-  else a.count++;
-}
-
-export function clearAttempts(key: string) {
-  attempts.delete(key);
-}
-
-export function clientKey(req: Request, extra = ""): string {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-  return `${ip}|${extra.toLowerCase()}`;
-}
-
-/** Reject cross-site form posts: our API only accepts JSON bodies. */
+/**
+ * Mutating API calls must send JSON and come from this same site. Blocks
+ * cross-site form posts (CSRF) without needing tokens.
+ */
 export function isJsonRequest(req: Request): boolean {
-  return (req.headers.get("content-type") ?? "").includes("application/json");
+  if (!(req.headers.get("content-type") ?? "").includes("application/json")) return false;
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // same-origin fetches in some browsers omit it; cookies are SameSite=Lax anyway
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
 }

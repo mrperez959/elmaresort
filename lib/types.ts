@@ -52,6 +52,12 @@ export type Settings = {
   contactWhatsApp: string;
   contactPhone: string;
   contactEmail: string;
+  /** PRIVATE: shown only to the guest, on their trip page, from check-in day */
+  propertyAddress: string;
+  /** PRIVATE: door code, parking, wifi... same visibility as the address */
+  checkInInstructions: string;
+  /** Public, approximate: what the map on the home page centers on */
+  approxArea: string;
 };
 
 export type PublicSettings = {
@@ -109,6 +115,7 @@ export type PublicUser = {
   lastName: string;
   email: string;
   phone: string;
+  emailVerified: boolean;
 };
 
 export type BookingSummary = {
@@ -122,6 +129,7 @@ export type BookingSummary = {
   createdAt: string;
   guestName?: string;
   guestEmail?: string;
+  guestPhone?: string;
   /** full price breakdown saved at booking time (older bookings may lack it) */
   quote?: Quote | null;
   refunded?: number;

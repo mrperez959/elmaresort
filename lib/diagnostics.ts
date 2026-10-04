@@ -4,6 +4,7 @@ import { getSettings } from "./settings";
 import { getReviews } from "./reviews";
 import { todayAtProperty } from "./dates";
 import { square } from "./square";
+import { mailConfigured, verifyMailConnection } from "./mail";
 
 export type Check = { name: string; status: "ok" | "warn" | "error"; message: string };
 
@@ -89,6 +90,36 @@ export async function runChecks(): Promise<Check[]> {
       }
     }
   }
+
+  // Email (verification codes, booking confirmations, admin sign-in codes)
+  if (!mailConfigured()) {
+    checks.push({
+      name: "Email",
+      status: "error",
+      message: "Not set up. Guests can't confirm their email, so they can't book. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and MAIL_FROM.",
+    });
+  } else {
+    try {
+      await verifyMailConnection();
+      checks.push({ name: "Email", status: "ok", message: `Sending as ${process.env.MAIL_FROM}.` });
+    } catch (err) {
+      checks.push({ name: "Email", status: "error", message: `The email server refused the login: ${(err as Error).message}` });
+    }
+  }
+  checks.push(
+    process.env.ADMIN_EMAIL
+      ? { name: "Admin security", status: "ok", message: `Sign-in codes and new-booking alerts go to ${process.env.ADMIN_EMAIL}.` }
+      : {
+          name: "Admin security",
+          status: "warn",
+          message: "Set ADMIN_EMAIL to require an emailed code when signing in here and to get an email for every direct booking.",
+        },
+  );
+  checks.push(
+    settings.propertyAddress
+      ? { name: "Address", status: "ok", message: "Saved. Guests see it on their trip page from check-in day." }
+      : { name: "Address", status: "warn", message: "Not set. Add the exact address below so guests get it on check-in day." },
+  );
 
   // Tax
   checks.push(

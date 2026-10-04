@@ -6,11 +6,14 @@ import type { Settings } from "@/lib/types";
 import type { PublicReview } from "@/lib/reviews";
 import { weekendRate } from "@/lib/pricing";
 import { POLICIES, POLICY_IDS } from "@/lib/policy";
+import { CodeInput } from "./AuthPanel";
 import { money } from "@/lib/format";
 
 export function AdminLogin() {
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"password" | "code">("password");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,31 +21,41 @@ export function AdminLogin() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const r = await fetch("/api/admin/login", {
+    const r = await fetch(step === "password" ? "/api/admin/login" : "/api/admin/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(step === "password" ? { password } : { code }),
     });
-    if (r.ok) router.refresh();
-    else {
-      setError((await r.json().catch(() => ({}))).error ?? "Sign-in failed.");
-      setBusy(false);
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Sign-in failed.");
+    if (body.needsCode) {
+      setStep("code");
+      return;
     }
+    router.refresh();
   }
 
   return (
     <form className="guest-form admin-login" onSubmit={submit}>
-      <label>
-        Admin password
-        <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      </label>
+      {step === "password" ? (
+        <label>
+          Admin password
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+      ) : (
+        <>
+          <p className="auth-intro">We emailed a 6-digit code to the admin email.</p>
+          <CodeInput value={code} onChange={setCode} />
+        </>
+      )}
       {error && (
         <p className="notice error" role="alert">
           {error}
         </p>
       )}
       <button className="pay" type="submit" disabled={busy}>
-        {busy ? "Checking…" : "Sign in"}
+        {busy ? "Checking…" : step === "password" ? "Continue" : "Sign in"}
       </button>
     </form>
   );
@@ -96,7 +109,10 @@ function fromForm(f: Form): Record<string, unknown> {
   for (const [k, v] of Object.entries(f)) {
     if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy") out[k] = v;
     else if (k === "taxesConfigured") continue;
-    else if (k === "contactWhatsApp" || k === "contactPhone" || k === "contactEmail") out[k] = v;
+    else if (
+      ["contactWhatsApp", "contactPhone", "contactEmail", "propertyAddress", "checkInInstructions", "approxArea"].includes(k)
+    )
+      out[k] = v;
     else if (k === "taxes") {
       const rows = v as TaxRow[];
       // Untouched suggestions keep booking closed instead of failing validation.
@@ -334,7 +350,8 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           </button>
         </div>
         <p className="field-hint wide">
-          Charged on the nights, cleaning fee and pet fee, and shown to the guest line by line at checkout. Rates
+          Charged on the nights, cleaning fee and pet fee. Guests see them added together as one "Taxes" line; each
+          line is kept separately in the bookings for your tax filings. Rates
           depend on the county: confirm them with the Florida Department of Revenue and your county tax collector.
           Remove every line only if you don&apos;t collect taxes on these bookings.
         </p>
@@ -366,6 +383,36 @@ export function AdminSettings({ initial }: { initial: Settings }) {
         </label>
         <Field label="Check-in from" suffix=":00 (24h)" hint="Deadlines count from this time" value={form.checkInHour} onChange={set("checkInHour")} />
         <Field label="Check-out by" suffix=":00 (24h)" value={form.checkOutHour} onChange={set("checkOutHour")} />
+      </fieldset>
+
+      <fieldset>
+        <legend>Address and check-in</legend>
+        <label className="field wide-field">
+          <span className="field-label">Exact address (private)</span>
+          <span className="field-input">
+            <input value={form.propertyAddress} onChange={(e) => set("propertyAddress")(e.target.value)} />
+          </span>
+          <span className="field-hint">
+            Guests only see it on their trip page, starting on their check-in day. It&apos;s never on the public site.
+          </span>
+        </label>
+        <label className="field wide-field">
+          <span className="field-label">Check-in instructions (private)</span>
+          <textarea
+            rows={5}
+            value={form.checkInInstructions}
+            placeholder={"Door code, where to park, wifi name and password, trash day…"}
+            onChange={(e) => set("checkInInstructions")(e.target.value)}
+          />
+          <span className="field-hint">Shown together with the address, from check-in day.</span>
+        </label>
+        <label className="field wide-field">
+          <span className="field-label">Area shown on the public map</span>
+          <span className="field-input">
+            <input value={form.approxArea} onChange={(e) => set("approxArea")(e.target.value)} />
+          </span>
+          <span className="field-hint">A neighborhood or area, never the street address. The map centers on it.</span>
+        </label>
       </fieldset>
 
       <fieldset>

@@ -2,6 +2,7 @@ import "server-only";
 import { currentUser, isJsonRequest } from "./auth";
 import { getTrip, TripError, type Trip } from "./trips";
 import { QuoteError } from "./quote";
+import { allow } from "./ratelimit";
 
 /** Shared plumbing for /api/trips/[code]/*: auth, ownership and error mapping. */
 export async function withGuestTrip(
@@ -12,6 +13,10 @@ export async function withGuestTrip(
   if (!isJsonRequest(req)) return Response.json({ error: "Unsupported request." }, { status: 415 });
   const user = await currentUser();
   if (!user) return Response.json({ error: "Sign in again to manage your trip." }, { status: 401 });
+  if (!user.emailVerified) return Response.json({ error: "Confirm your email first." }, { status: 403 });
+  if (!(await allow(`trip:${user.id}`, 30, 3600))) {
+    return Response.json({ error: "Too many changes in a short time. Try again later." }, { status: 429 });
+  }
   const { code } = await params;
   const trip = await getTrip(code, user.id);
   if (!trip) return Response.json({ error: "Trip not found." }, { status: 404 });

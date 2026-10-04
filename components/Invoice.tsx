@@ -61,14 +61,14 @@ export function PriceBeforeTaxes({ quote }: { quote: Quote }) {
       </table>
       <p className="fine">
         {quote.taxes.length
-          ? "Florida taxes are added on the next step, before you pay."
+          ? "Taxes are added on the next step, before you pay."
           : "No taxes are added to this stay."}
       </p>
     </div>
   );
 }
 
-/** Step 2, at checkout: the full invoice with each tax on its own line. */
+/** Step 2, at checkout: the full invoice. Taxes show as one line, like Airbnb. */
 export function FullInvoice({ quote }: { quote: Quote }) {
   return (
     <table className="breakdown invoice">
@@ -78,14 +78,12 @@ export function FullInvoice({ quote }: { quote: Quote }) {
           <th scope="row">Total before taxes</th>
           <td>{money(quote.subtotal)}</td>
         </tr>
-        {quote.taxes.map((t) => (
-          <tr key={t.name} className="tax">
-            <th scope="row">
-              {t.name} ({t.percent}%)
-            </th>
-            <td>{money(t.amount)}</td>
+        {quote.tax > 0 && (
+          <tr className="tax">
+            <th scope="row">Taxes</th>
+            <td>{money(quote.tax)}</td>
           </tr>
-        ))}
+        )}
       </tbody>
       <tfoot>
         <tr>

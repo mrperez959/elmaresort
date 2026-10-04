@@ -1,6 +1,7 @@
 import { bookStay } from "@/lib/booking";
 import { parseStayRequest, QuoteError } from "@/lib/quote";
 import { currentUser, isJsonRequest } from "@/lib/auth";
+import { allow, clientIp } from "@/lib/ratelimit";
 import type { BookResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,13 @@ export async function POST(req: Request) {
     const guest = await currentUser();
     if (!guest) {
       return reply({ state: "signin_required", message: "Sign in or create an account to book." }, 401);
+    }
+    if (!guest.emailVerified) {
+      return reply({ state: "signin_required", message: "Confirm your email with the code we sent before booking." }, 403);
+    }
+    // Stops "card testing" (trying many stolen cards through the payment form).
+    if (!(await allow(`book-user:${guest.id}`, 6, 3600)) || !(await allow(`book-ip:${clientIp(req)}`, 15, 3600))) {
+      return reply({ state: "error", message: "Too many payment attempts. Please wait an hour or contact us." }, 429);
     }
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     const stay = parseStayRequest(body);

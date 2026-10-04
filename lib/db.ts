@@ -90,6 +90,30 @@ INSERT INTO payments (booking_id, square_payment_id, amount_cents)
   SELECT b.id, b.square_payment_id, b.total_cents FROM bookings b
   WHERE NOT EXISTS (SELECT 1 FROM payments p WHERE p.booking_id = b.id);
 
+-- Email verification and session revocation.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version int NOT NULL DEFAULT 1;
+
+-- One-time codes sent by email (stored hashed, never in clear).
+CREATE TABLE IF NOT EXISTS email_codes (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email       text NOT NULL,
+  purpose     text NOT NULL,
+  code_hash   text NOT NULL,
+  attempts    int NOT NULL DEFAULT 0,
+  expires_at  timestamptz NOT NULL,
+  used_at     timestamptz,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS email_codes_lookup ON email_codes (email, purpose, created_at DESC);
+
+-- Rate limits shared by every server instance (in-memory counters don't work on serverless).
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key           text PRIMARY KEY,
+  window_start  timestamptz NOT NULL,
+  count         int NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL,

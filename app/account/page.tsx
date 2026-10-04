@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AuthPanel, SignOutButton } from "@/components/AuthPanel";
+import { AuthPanel, SignOutButton, VerifyEmail } from "@/components/AuthPanel";
 import { SiteHeader } from "@/components/SiteHeader";
 import { currentUser } from "@/lib/auth";
 import { bookingsForUser } from "@/lib/users";
@@ -19,6 +19,19 @@ export default async function Account() {
         <section className="account narrow-col">
           <h2>Sign in to see your trips</h2>
           <AuthPanel initialMode="login" />
+        </section>
+      </main>
+    );
+  }
+
+  if (!user.emailVerified) {
+    return (
+      <main className="page">
+        <SiteHeader user={user} showTagline={false} />
+        <section className="account narrow-col">
+          <h2>Hi, {user.firstName}</h2>
+          <VerifyEmail email={user.email} />
+          <SignOutButton />
         </section>
       </main>
     );

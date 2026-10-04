@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SquareCard, type SquareCardHandle } from "./SquareCard";
-import { AuthPanel } from "./AuthPanel";
+import { AuthPanel, VerifyEmail } from "./AuthPanel";
 import { FullInvoice } from "./Invoice";
 import type { BookResult, PublicUser, Quote, StayRequest } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
@@ -154,6 +154,8 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
           <p className="notice">{quoteError ? "Pick dates that are open to continue." : "One moment…"}</p>
         ) : !user ? (
           <AuthPanel intro="Create an account or sign in to finish booking. Your trips and receipts are saved there." />
+        ) : !user.emailVerified ? (
+          <VerifyEmail email={user.email} />
         ) : (
           <form className="guest-form" onSubmit={pay}>
             <p className="booking-as">

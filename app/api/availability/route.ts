@@ -1,4 +1,5 @@
 import { getDays } from "@/lib/availability";
+import { allow, clientIp } from "@/lib/ratelimit";
 import { getSettings } from "@/lib/settings";
 import { nightlyRate } from "@/lib/pricing";
 import { addDays, todayAtProperty } from "@/lib/dates";
@@ -7,7 +8,10 @@ import type { PublicDay } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 /** Next 12 months: busy dates from Airbnb/Vrbo + direct bookings, prices from /admin. */
-export async function GET() {
+export async function GET(req: Request) {
+  if (!(await allow(`avail:${clientIp(req)}`, 60, 60))) {
+    return Response.json({ error: "Too many requests. Wait a moment." }, { status: 429 });
+  }
   try {
     const start = todayAtProperty();
     const [days, settings] = await Promise.all([getDays(start, addDays(start, 365)), getSettings()]);

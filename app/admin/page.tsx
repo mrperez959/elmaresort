@@ -97,6 +97,8 @@ export default async function Admin() {
                     {b.guestName}
                     <br />
                     <span className="fine">{b.guestEmail}</span>
+                    <br />
+                    <span className="fine">{b.guestPhone}</span>
                   </td>
                   <td>
                     {b.guests}

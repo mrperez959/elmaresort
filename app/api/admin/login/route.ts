@@ -1,28 +1,36 @@
-import {
-  adminPasswordMatches,
-  clearAttempts,
-  clientKey,
-  isJsonRequest,
-  recordFailedAttempt,
-  startAdminSession,
-  tooManyAttempts,
-} from "@/lib/auth";
+import { adminPasswordMatches, startAdminPending, startAdminSession } from "@/lib/auth";
+import { sendCode, CodeError } from "@/lib/codes";
+import { allow, reset, clientIp } from "@/lib/ratelimit";
+import { mailConfigured } from "@/lib/mail";
+import { readJson, fail } from "@/lib/route-helpers";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  if (!isJsonRequest(req)) return Response.json({ error: "Unsupported request." }, { status: 415 });
-  const key = clientKey(req, "admin");
-  if (tooManyAttempts(key)) {
-    return Response.json({ error: "Too many attempts. Wait 15 minutes and try again." }, { status: 429 });
-  }
-  const b = ((await req.json().catch(() => null)) ?? {}) as Record<string, unknown>;
+  const b = await readJson(req);
+  if (b instanceof Response) return b;
+  const ip = clientIp(req);
+  if (!(await allow(`admin-login:${ip}`, 5, 900))) return fail("Too many attempts. Wait 15 minutes and try again.", 429);
   if (!adminPasswordMatches(String(b.password ?? ""))) {
-    recordFailedAttempt(key);
     await new Promise((r) => setTimeout(r, 800));
-    return Response.json({ error: "Wrong password." }, { status: 401 });
+    return fail("Wrong password.", 401);
   }
-  clearAttempts(key);
+  await reset(`admin-login:${ip}`);
+
+  // Second step: a code sent to ADMIN_EMAIL, when email is set up.
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail && (mailConfigured() || process.env.NODE_ENV !== "production")) {
+    try {
+      await sendCode(adminEmail, "admin", ip);
+    } catch (err) {
+      if (!(err instanceof CodeError)) {
+        console.error("[admin/login] code email failed", err);
+        return fail("The sign-in code couldn't be emailed. Check the email settings.", 500);
+      }
+    }
+    await startAdminPending();
+    return Response.json({ ok: true, needsCode: true });
+  }
   await startAdminSession();
   return Response.json({ ok: true });
 }

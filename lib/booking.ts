@@ -6,7 +6,38 @@ import { quoteStay, QuoteError } from "./quote";
 import { getSettings } from "./settings";
 import { insertBooking, cancelBooking } from "./users";
 import { OVERLAP_ERROR } from "./db";
-import type { BookResult, PublicUser, StayRequest } from "./types";
+import type { BookResult, PublicUser, Quote, StayRequest } from "./types";
+import { sendMail } from "./mail";
+
+const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+/** Confirmation to the guest and a heads-up to the owner. Never blocks the booking. */
+async function notify(guest: PublicUser, code: string, q: Quote) {
+  const name = env.propertyName();
+  const guests = q.adults + q.children;
+  const lines = [
+    `Dates: ${q.checkIn} to ${q.checkOut} (${q.nights} nights)`,
+    `Guests: ${guests}${q.infants ? ` + ${q.infants} infants` : ""}${q.pets ? `, ${q.pets} pets` : ""}`,
+    `Total paid: ${usd(q.total)} (taxes ${usd(q.tax)})`,
+    `Confirmation code: ${code}`,
+  ].join("\n");
+  await Promise.allSettled([
+    sendMail(
+      guest.email,
+      `You're booked at ${name} (${code})`,
+      `Hi ${guest.firstName},\n\nYour stay is confirmed.\n\n${lines}\n\nYou can see your receipt, change or cancel your trip from your account on our website. The exact address and check-in instructions appear there on your check-in day.\n\n${name}`,
+    ),
+    process.env.ADMIN_EMAIL
+      ? sendMail(
+          process.env.ADMIN_EMAIL,
+          `New direct booking ${code}: ${q.checkIn} to ${q.checkOut}`,
+          `${guest.firstName} ${guest.lastName}\n${guest.email}\n${guest.phone}\n\n${lines}\n\nBlock these dates in Hospitable now if the calendar sync hasn't done it yet.`,
+        )
+      : Promise.resolve(),
+  ]).then((results) =>
+    results.forEach((r) => r.status === "rejected" && console.error("[booking] email failed", r.reason)),
+  );
+}
 
 type BookInput = {
   stay: StayRequest;
@@ -111,6 +142,7 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     // The capture may have gone through even if the response didn't reach us.
     const check = await square().payments.get({ paymentId }).catch(() => null);
     if (check?.payment?.status === "COMPLETED") {
+      await notify(guest, code, quote);
       return { state: "confirmed", code, quote, firstName: guest.firstName };
     }
     console.error(`[booking] capture failed for ${paymentId}; cancelling booking ${code}`, err);
@@ -119,5 +151,6 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     throw err;
   }
 
+  await notify(guest, code, quote);
   return { state: "confirmed", code, quote, firstName: guest.firstName };
 }

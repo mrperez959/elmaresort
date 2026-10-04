@@ -104,9 +104,33 @@ Sin la API de Hospitable no se pueden leer automáticamente, así que se manejan
 
 Agrega las recientes a medida que llegan, no solo las mejores. Presentar solo las buenas como si fueran todas va contra la regla de la FTC sobre reseñas.
 
-## Cuentas de huéspedes
+## Cuentas de huéspedes y seguridad
 
-Se crean con nombre, teléfono, email y contraseña, guardada cifrada con scrypt. La sesión dura 30 días; la de admin es independiente y dura 12 horas. Todavía no hay recuperación de contraseña, porque necesita un servicio de emails.
+**Cuentas:**
+- **Registro:** nombre, celular (se guarda en formato internacional, por ejemplo +18135550100), email y contraseña de 10 caracteres o más, guardada cifrada con scrypt.
+- **Email verificado:** al registrarse llega un **código de 6 dígitos** por email. Sin confirmarlo no se puede pagar, ni cambiar o cancelar viajes. El código vence en 15 minutos, admite 5 intentos y se guarda cifrado.
+- **¿Olvidaste tu contraseña?:** se recupera con un código por email. Al cambiarla se cierran las sesiones en todos los demás dispositivos.
+
+**Panel de admin:** contraseña más un código enviado a `ADMIN_EMAIL`. A ese mismo email llega un aviso por cada reserva directa, para que bloquees las fechas en Hospitable enseguida.
+
+**Protecciones:**
+- **Inyección SQL:** todas las consultas usan parámetros (`$1, $2…`) y ningún dato del usuario se pega dentro del SQL.
+- **Ataques desde otros sitios (CSRF):** la API solo acepta JSON desde el mismo dominio, y las cookies son `HttpOnly`, `Secure` y `SameSite=Lax`.
+- **XSS:** React escapa todo el texto y no se inserta HTML de usuarios.
+- **Límites de intentos en la base de datos** (sirven aunque haya varios servidores):
+  - inicio de sesión: 8 cada 15 min por email;
+  - registros: 5 por hora por IP;
+  - códigos: 1 por minuto y 5 por hora;
+  - **pagos: 6 por hora por cuenta y 15 por IP**, contra el "card testing" (probar tarjetas robadas);
+  - cálculos de precio y disponibilidad.
+- **Bots:** un campo oculto en el registro los atrapa.
+- **Encabezados de seguridad:** HSTS, prohibición de mostrar la web dentro de otra (clickjacking), `nosniff` y Referrer-Policy. Las páginas privadas no se guardan en caché.
+- **Pagos:** los datos de la tarjeta nunca pasan por nuestro servidor (los maneja Square). Square aplica 3-D Secure, CVV y verificación del código postal.
+
+## Dirección y mapa
+
+- **Mapa público:** la portada muestra solo la **zona aproximada** (`/admin` → *Area shown on the public map*).
+- **Dirección exacta e instrucciones de llegada:** se guardan en la base de datos, nunca en el código ni en GitHub, y solo aparecen en la página del viaje del huésped **desde el día del check-in hasta el de salida**. El email de confirmación tampoco las incluye.
 
 ## Configuración
 
@@ -118,6 +142,8 @@ npm run dev
 
 **Base de datos:** en Vercel ve a *Storage → Create Database → Neon* y conéctala al proyecto; `DATABASE_URL` se agrega sola. Las tablas se crean y actualizan automáticamente. En local sirve cualquier Postgres 13 o superior.
 
+**Email:** con Gmail, activa la verificación en 2 pasos de tu cuenta de Google, crea una "contraseña de aplicación" en myaccount.google.com/apppasswords y ponla en `SMTP_PASS`. El resto de valores está en `.env.example`. Más adelante, con un dominio propio, conviene un servicio como Resend o Postmark, que también funcionan por SMTP.
+
 **Seguridad:** genera `SESSION_SECRET` con `openssl rand -base64 48` y elige una `ADMIN_PASSWORD` larga. Si cambias `SESSION_SECRET`, se cierran las sesiones **y cambia el enlace del calendario de la web**, así que tendrías que volver a importarlo en Airbnb y Vrbo.
 
 **Square:** en developer.squareup.com crea una aplicación y copia el Access token, el Application ID y el Location ID. Empieza con Sandbox (tarjeta de prueba `4111 1111 1111 1111`, ZIP `94103`).
@@ -126,7 +152,10 @@ npm run dev
 
 ## Lista de pruebas antes de pasar a producción
 
-- [ ] Connections en verde para Airbnb, Vrbo, Square e impuesto.
+- [ ] Connections en verde para calendarios, Square, Email e impuestos.
+- [ ] Crear una cuenta: llega el código, se confirma y luego se puede pagar.
+- [ ] "Forgot your password?" funciona.
+- [ ] Entrar a `/admin` pide el código enviado a `ADMIN_EMAIL`.
 - [ ] Una noche reservada en Airbnb aparece tachada en la web en menos de 5 minutos.
 - [ ] Una reserva de prueba en la web aparece en `/admin`, en `/account` del huésped y, horas después, bloqueada en Airbnb y Vrbo.
 - [ ] Tarjeta rechazada: mensaje claro y ninguna reserva creada.

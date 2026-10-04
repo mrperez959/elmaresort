@@ -31,6 +31,9 @@ export const DEFAULT_SETTINGS: Settings = {
   contactWhatsApp: "",
   contactPhone: "",
   contactEmail: "",
+  propertyAddress: "",
+  checkInInstructions: "",
+  approxArea: "Town 'n' Country, Tampa, FL",
 };
 
 export class SettingsError extends Error {}
@@ -165,6 +168,9 @@ export function validateSettings(raw: unknown): Settings {
     contactWhatsApp: phone(input.contactWhatsApp, "WhatsApp number"),
     contactPhone: phone(input.contactPhone, "Phone number"),
     contactEmail: email(input.contactEmail),
+    propertyAddress: String(input.propertyAddress ?? "").trim().slice(0, 300),
+    checkInInstructions: String(input.checkInInstructions ?? "").trim().slice(0, 4000),
+    approxArea: String(input.approxArea ?? "").trim().slice(0, 120) || DEFAULT_SETTINGS.approxArea,
   };
   if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {
