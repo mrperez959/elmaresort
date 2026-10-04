@@ -29,7 +29,9 @@ export default async function Admin() {
     listReviews(),
     headers(),
   ]);
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  // Use the public production domain (deployment-specific URLs can be password-protected by Vercel).
+  const host =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const exportUrl = `${proto}://${host}/calendar/${exportToken()}.ics`;
 

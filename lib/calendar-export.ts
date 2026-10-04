@@ -24,6 +24,32 @@ export async function buildExportCalendar(): Promise<string> {
      FROM bookings WHERE status = 'confirmed' AND check_out >= CURRENT_DATE - 30 ORDER BY check_in`,
   );
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const events = rows.map((r) => [
+    "BEGIN:VEVENT",
+    `UID:${r.code}@elmaresort`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${ics(r.start)}`,
+    `DTEND;VALUE=DATE:${ics(r.end)}`,
+    "SUMMARY:Reserved (direct booking)",
+    "STATUS:CONFIRMED",
+    "TRANSP:OPAQUE",
+    "END:VEVENT",
+  ]);
+  // A calendar with no events is invalid (RFC 5545 needs at least one), and some
+  // importers reject it. Until there are real bookings, publish one night far in
+  // the past: it blocks nothing.
+  if (events.length === 0) {
+    events.push([
+      "BEGIN:VEVENT",
+      "UID:placeholder@elmaresort",
+      `DTSTAMP:${stamp}`,
+      "DTSTART;VALUE=DATE:20200101",
+      "DTEND;VALUE=DATE:20200102",
+      "SUMMARY:Calendar created",
+      "TRANSP:TRANSPARENT",
+      "END:VEVENT",
+    ]);
+  }
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -31,15 +57,8 @@ export async function buildExportCalendar(): Promise<string> {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "X-WR-CALNAME:Elma Resort direct bookings",
-    ...rows.flatMap((r) => [
-      "BEGIN:VEVENT",
-      `UID:${r.code}@elmaresort`,
-      `DTSTAMP:${stamp}`,
-      `DTSTART;VALUE=DATE:${ics(r.start)}`,
-      `DTEND;VALUE=DATE:${ics(r.end)}`,
-      "SUMMARY:Reserved (direct booking)",
-      "END:VEVENT",
-    ]),
+    "X-WR-TIMEZONE:America/New_York",
+    ...events.flat(),
     "END:VCALENDAR",
   ];
   return lines.join("\r\n") + "\r\n";

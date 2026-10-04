@@ -10,7 +10,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   return new Response(await buildExportCalendar(), {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": 'inline; filename="elmaresort.ics"',
       "Cache-Control": "no-store",
     },
   });
+}
+
+// Some importers check the link with HEAD first.
+export async function HEAD(req: Request, ctx: { params: Promise<{ file: string }> }) {
+  const res = await GET(req, ctx);
+  return new Response(null, { status: res.status, headers: res.headers });
 }
