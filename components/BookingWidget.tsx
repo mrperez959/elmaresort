@@ -37,6 +37,10 @@ export function BookingWidget({ settings }: Props) {
   const [pets, setPets] = useState(count(params.get("pets"), 0));
   const [monthOffset, setMonthOffset] = useState(0);
 
+  const [promo, setPromo] = useState<string>((params.get("promo") ?? "").toUpperCase());
+  const [promoInput, setPromoInput] = useState<string>((params.get("promo") ?? "").toUpperCase());
+  const [promoOpen, setPromoOpen] = useState(Boolean(params.get("promo")));
+  const [promoError, setPromoError] = useState<string | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoting, setQuoting] = useState(false);
@@ -109,7 +113,7 @@ export function BookingWidget({ settings }: Props) {
     fetch("/api/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkIn, checkOut, adults, children, infants, pets }),
+      body: JSON.stringify({ checkIn, checkOut, adults, children, infants, pets, promo: promo || undefined }),
       signal: ctrl.signal,
     })
       .then(async (r) => {
@@ -117,6 +121,7 @@ export function BookingWidget({ settings }: Props) {
         if (!r.ok) setQuoteError(body.error ?? "The price couldn't be calculated.");
         else {
           setQuote(body.quote);
+          setPromoError(body.promoError ?? null);
           track("dates_selected", { n: body.quote.nights });
         }
       })
@@ -125,7 +130,7 @@ export function BookingWidget({ settings }: Props) {
       })
       .finally(() => setQuoting(false));
     return () => ctrl.abort();
-  }, [checkIn, checkOut, adults, children, infants, pets]);
+  }, [checkIn, checkOut, adults, children, infants, pets, promo]);
 
   const base = new Date(`${today}T00:00:00Z`);
   const months = [0, 1].map((i) => {
@@ -253,6 +258,63 @@ export function BookingWidget({ settings }: Props) {
         </div>
         <p className="fine">Up to {settings.maxGuests} guests, not counting infants.</p>
 
+        <div className="promo">
+          {promo && quote?.promoDiscount ? (
+            <p className="promo-applied">
+              <span>
+                <strong>{quote.promoDiscount.code}</strong> applied: {quote.promoDiscount.percent}% off
+              </span>
+              <button
+                type="button"
+                className="link"
+                onClick={() => {
+                  setPromo("");
+                  setPromoInput("");
+                  setPromoError(null);
+                }}
+              >
+                Remove
+              </button>
+            </p>
+          ) : !promoOpen ? (
+            <button type="button" className="link" onClick={() => setPromoOpen(true)}>
+              Have a promo code?
+            </button>
+          ) : (
+            <form
+              className="promo-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPromoError(null);
+                setPromo(promoInput.trim().toUpperCase());
+                if (!checkIn || !checkOut) setPromoError("Pick your dates and the code will be applied.");
+              }}
+            >
+              <label className="field">
+                <span className="field-label">Promo code</span>
+                <span className="field-input">
+                  <input
+                    value={promoInput}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={24}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  />
+                </span>
+              </label>
+              <button type="submit" className="promo-apply" disabled={!promoInput.trim()}>
+                Apply
+              </button>
+            </form>
+          )}
+          {promoError && (
+            <p className="notice error" role="alert">
+              {promoError}
+            </p>
+          )}
+        </div>
+
         {!settings.bookingOpen && <p className="notice">Online booking opens soon.</p>}
         {quoting && <p className="notice">Calculating your total…</p>}
         {quoteError && (
@@ -274,6 +336,7 @@ export function BookingWidget({ settings }: Props) {
                 children: String(children),
                 infants: String(infants),
                 pets: String(pets),
+                ...(quote.promoDiscount ? { promo: quote.promoDiscount.code } : {}),
               })}`}
             >
               Continue to checkout

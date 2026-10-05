@@ -2246,3 +2246,105 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Promo code ---------- */
+
+.promo {
+  margin: 4px 0 12px;
+}
+
+.promo .link {
+  padding: 0;
+}
+
+.promo-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.promo-form input {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.promo-apply {
+  padding: 9px 16px;
+  border: 1px solid var(--navy);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promo-apply:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.promo-applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--ocean-soft);
+  border-radius: 4px;
+  font-size: 0.92rem;
+}
+
+/* ---------- Admin: influencer codes ---------- */
+
+.promo-intro {
+  max-width: 75ch;
+  margin: 0 0 20px;
+}
+
+.new-promo {
+  max-width: 260px;
+  margin-bottom: 20px;
+}
+
+.promos .admin-form {
+  margin-bottom: 24px;
+}
+
+.pill {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pill.ok {
+  background: #e3f3ea;
+  color: #1f6f46;
+}
+
+.pill.off {
+  background: #f1e4e1;
+  color: var(--error);
+}
+
+.pill.soon {
+  background: var(--coral-soft);
+  color: var(--navy);
+}
+
+.admin-table tfoot th {
+  border-top: 2px solid var(--ink);
+  border-bottom: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.promo-links {
+  display: grid;
+  gap: 12px;
+  max-width: 820px;
+}

@@ -137,9 +137,12 @@ export type ChangePreview = {
 /** New price for a change, and how much moves either way. */
 export async function previewChange(t: Trip, stay: StayRequest): Promise<ChangePreview> {
   if (!canChange(t)) throw new TripError("This trip can't be changed online anymore. Contact us.");
+  const pd = t.quote.promoDiscount;
   const next = await quoteStay(stay, {
     forBooking: true,
     replacing: { id: t.id, start: t.quote.checkIn, end: t.quote.checkOut },
+    // The promo code the guest booked with stays on the trip, even if the code has expired since.
+    frozenPromo: pd ? { code: pd.code, percent: pd.percent, commissionPercent: pd.commissionPercent } : null,
   });
   const cur = t.quote;
   const up = next.total - cur.total;

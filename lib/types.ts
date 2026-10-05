@@ -86,7 +86,12 @@ export type StayRequest = {
   children: number;
   infants: number;
   pets: number;
+  /** promo code typed by the guest */
+  promo?: string;
 };
+
+/** A promo code as applied to one stay (frozen into the booking). */
+export type AppliedPromo = { code: string; percent: number; commissionPercent: number };
 
 export type Quote = StayRequest & {
   nights: number;
@@ -99,6 +104,7 @@ export type Quote = StayRequest & {
   nightsSubtotal: number;
   lengthDiscount: { label: string; percent: number; amount: number } | null;
   directDiscount: { percent: number; amount: number } | null;
+  promoDiscount: (AppliedPromo & { amount: number }) | null;
   /** nights after discounts */
   accommodation: number;
   cleaningFee: number;

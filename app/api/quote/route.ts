@@ -1,4 +1,4 @@
-import { parseStayRequest, quoteStay, QuoteError } from "@/lib/quote";
+import { parseStayRequest, quoteStayWithPromo, QuoteError } from "@/lib/quote";
 import { allow, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,9 @@ export async function POST(req: Request) {
   }
   try {
     const stay = parseStayRequest(await req.json().catch(() => null));
-    const quote = await quoteStay(stay);
-    return Response.json({ quote });
+    // "soft": a bad promo code doesn't block the price; the guest sees why it didn't apply.
+    const { quote, promoError } = await quoteStayWithPromo(stay, { promoMode: "soft" });
+    return Response.json({ quote, promoError });
   } catch (err) {
     if (err instanceof QuoteError) {
       return Response.json({ error: err.message, code: err.code }, { status: 409 });

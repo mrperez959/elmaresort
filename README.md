@@ -80,6 +80,26 @@ Es un botón flotante en todas las páginas, excepto `/admin`. A los pocos segun
 
 Los números y el email se configuran en `/admin` → *Chat button*. Si están vacíos, el botón no aparece.
 
+## Códigos de influencers (`/admin/promos`)
+
+Cada código tiene:
+
+- **Influencer y contacto.**
+- **Descuento para el huésped:** 5% por defecto. Se aplica a las noches, encima de los demás descuentos.
+- **Comisión del influencer:** 3% por defecto, sobre la venta antes de impuestos.
+- **Período de uso:** fechas entre las que se puede usar el código.
+- **Fechas de estadía:** el código solo vale para check-ins dentro de ese rango.
+- **Máximo de reservas** (opcional) y un interruptor para pausarlo.
+
+**Cómo lo usa el huésped:**
+- **En la portada:** escribe el código en "Have a promo code?" al elegir fechas. Si no es válido, se le explica por qué (vencido, fuera de fechas, agotado) y el precio sigue sin descuento.
+- **Con el enlace del influencer:** cada código tiene un enlace para compartir (`/?promo=CÓDIGO&utm_source=influencer&utm_campaign=CÓDIGO`) que trae el código ya puesto. Las visitas de ese enlace aparecen en Analytics bajo el código.
+
+**Cómo se calcula la comisión:**
+- La tabla muestra, por código, las reservas, las ventas antes de impuestos y la **comisión a pagar**.
+- Si una reserva se cancela o se reembolsa en parte, la comisión baja en la misma proporción.
+- Si el huésped cambia las fechas, conserva el descuento de su código aunque el código ya haya vencido.
+
 ## Métricas (`/admin/analytics`)
 
 La analítica es propia: los datos se guardan en tu misma base de datos, sin Google Analytics, sin cookies de terceros y sin guardar direcciones IP. El panel muestra:

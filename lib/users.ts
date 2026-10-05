@@ -93,8 +93,8 @@ export async function insertBooking(b: {
   const rows = await query<{ id: string }>(
     `WITH b AS (
        INSERT INTO bookings (user_id, code, square_payment_id, check_in, check_out,
-         adults, children, infants, pets, total_cents, quote, policy)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         adults, children, infants, pets, total_cents, quote, policy, promo_code, commission_percent)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING id
      ), p AS (
        INSERT INTO payments (booking_id, square_payment_id, amount_cents, kind)
@@ -102,7 +102,8 @@ export async function insertBooking(b: {
      )
      SELECT id FROM b`,
     [b.userId, b.code, b.squarePaymentId, q.checkIn, q.checkOut,
-     q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q), b.policy],
+     q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q), b.policy,
+     q.promoDiscount?.code ?? null, q.promoDiscount?.commissionPercent ?? null],
   );
   return rows[0].id;
 }

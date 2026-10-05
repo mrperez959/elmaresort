@@ -44,6 +44,9 @@ export default async function Admin() {
           <Link href="/admin/analytics" className="manage-link">
             Analytics →
           </Link>
+          <Link href="/admin/promos" className="manage-link">
+            Influencer codes →
+          </Link>
           <SignOutButton admin />
         </div>
       </div>

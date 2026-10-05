@@ -114,6 +114,25 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   count         int NOT NULL
 );
 
+-- Influencer promo codes.
+CREATE TABLE IF NOT EXISTS promo_codes (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code                text NOT NULL UNIQUE,
+  influencer          text NOT NULL,
+  contact             text NOT NULL DEFAULT '',
+  guest_percent       numeric(5,2) NOT NULL,
+  commission_percent  numeric(5,2) NOT NULL,
+  redeem_from         date,
+  redeem_to           date,
+  stay_from           date,
+  stay_to             date,
+  max_uses            int,
+  active              boolean NOT NULL DEFAULT true,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promo_code text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS commission_percent numeric(5,2);
+
 -- First-party analytics. No IP addresses are stored.
 CREATE TABLE IF NOT EXISTS visits (
   id            uuid PRIMARY KEY,

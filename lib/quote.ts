@@ -3,7 +3,8 @@ import { getDays, type Day, type Replacing } from "./availability";
 import { getSettings } from "./settings";
 import { isISODate, nightsBetween, nightsOf, todayAtProperty } from "./dates";
 import { isWeekendNight, weekendRate } from "./pricing";
-import type { Quote, Settings, StayRequest } from "./types";
+import type { AppliedPromo, Quote, Settings, StayRequest } from "./types";
+import { validatePromo, PromoError, normalizeCode } from "./promos";
 
 export type QuoteErrorCode =
   | "invalid"
@@ -12,7 +13,8 @@ export type QuoteErrorCode =
   | "closed"
   | "guests"
   | "too_long"
-  | "not_ready";
+  | "not_ready"
+  | "promo";
 
 export class QuoteError extends Error {
   code: QuoteErrorCode;
@@ -37,6 +39,7 @@ export function parseStayRequest(body: unknown): StayRequest {
     children: toCount(b.children),
     infants: toCount(b.infants),
     pets: toCount(b.pets),
+    promo: typeof b.promo === "string" && b.promo.trim() ? normalizeCode(b.promo).slice(0, 24) : undefined,
   };
   if (!isISODate(stay.checkIn) || !isISODate(stay.checkOut)) {
     throw new QuoteError("invalid", "Choose a check-in and a check-out date.");
@@ -50,7 +53,13 @@ const pct = (amount: number, percent: number) => Math.round((amount * percent) /
  * Pricing + rules check. Pure: availability comes from `days` (Hospitable),
  * prices and policies from `s` (the admin settings).
  */
-export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: string): Quote {
+export function priceStay(
+  stay: StayRequest,
+  days: Day[],
+  s: Settings,
+  today: string,
+  promo: AppliedPromo | null = null,
+): Quote {
   if (s.taxes === null) {
     throw new QuoteError("not_ready", "Online booking isn't open yet. Please check back soon.");
   }
@@ -118,7 +127,13 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
       ? { percent: s.directDiscountPercent, amount: pct(afterLength, s.directDiscountPercent) }
       : null;
 
-  const accommodation = afterLength - (directDiscount?.amount ?? 0);
+  const afterDirect = afterLength - (directDiscount?.amount ?? 0);
+
+  // Influencer promo code: an extra discount on top of everything else.
+  const promoDiscount =
+    promo && promo.percent > 0 ? { ...promo, amount: pct(afterDirect, promo.percent) } : promo ? { ...promo, amount: 0 } : null;
+
+  const accommodation = afterDirect - (promoDiscount?.amount ?? 0);
   const cleaningFee = s.cleaningFee;
   const petFee = stay.pets > 0 ? s.petFee : 0;
   const subtotal = accommodation + cleaningFee + petFee;
@@ -137,6 +152,7 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
     nightsSubtotal,
     lengthDiscount,
     directDiscount,
+    promoDiscount,
     accommodation,
     cleaningFee,
     petFee,
@@ -148,10 +164,27 @@ export function priceStay(stay: StayRequest, days: Day[], s: Settings, today: st
 }
 
 /** Fetch the calendar and settings for the stay and price it. */
+/**
+ * Fetch calendar + settings and price the stay.
+ *  - promo: "strict" (default) fails if the code is invalid; "soft" prices without it and reports why.
+ *  - frozenPromo: the promo already on a booking (trip changes keep it even if the code has since expired).
+ */
 export async function quoteStay(
   stay: StayRequest,
-  opts: { forBooking?: boolean; replacing?: Replacing } = {},
+  opts: { forBooking?: boolean; replacing?: Replacing; frozenPromo?: AppliedPromo | null } = {},
 ): Promise<Quote> {
+  return (await quoteStayWithPromo(stay, { ...opts, promoMode: "strict" })).quote;
+}
+
+export async function quoteStayWithPromo(
+  stay: StayRequest,
+  opts: {
+    forBooking?: boolean;
+    replacing?: Replacing;
+    frozenPromo?: AppliedPromo | null;
+    promoMode?: "strict" | "soft";
+  } = {},
+): Promise<{ quote: Quote; promoError: string | null }> {
   const s = await getSettings();
   if (!isISODate(stay.checkIn) || !isISODate(stay.checkOut) || stay.checkOut <= stay.checkIn) {
     throw new QuoteError("invalid", "Check-out must be after check-in.");
@@ -162,5 +195,18 @@ export async function quoteStay(
   }
   // Include the check-out day so its closed-for-checkout flag can be read.
   const days = await getDays(stay.checkIn, stay.checkOut, opts);
-  return priceStay(stay, days, s, todayAtProperty());
+
+  let promo: AppliedPromo | null = opts.frozenPromo ?? null;
+  let promoError: string | null = null;
+  if (opts.frozenPromo === undefined && stay.promo) {
+    try {
+      promo = await validatePromo(stay.promo, stay.checkIn);
+    } catch (err) {
+      if (!(err instanceof PromoError)) throw err;
+      if (opts.promoMode !== "soft") throw new QuoteError("promo", err.message);
+      promoError = err.message;
+    }
+  }
+  const quote = priceStay({ ...stay, promo: promo?.code }, days, s, todayAtProperty(), promo);
+  return { quote, promoError };
 }

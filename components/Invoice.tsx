@@ -23,6 +23,9 @@ function nightRows(q: Quote): Row[] {
   if (q.directDiscount) {
     rows.push({ label: `Direct booking discount (${q.directDiscount.percent}%)`, amount: -q.directDiscount.amount, kind: "discount" });
   }
+  if (q.promoDiscount && q.promoDiscount.amount > 0) {
+    rows.push({ label: `Promo code ${q.promoDiscount.code} (${q.promoDiscount.percent}%)`, amount: -q.promoDiscount.amount, kind: "discount" });
+  }
   if (q.cleaningFee) rows.push({ label: "Cleaning fee", amount: q.cleaningFee });
   if (q.petFee) rows.push({ label: `Pet fee (${q.pets} ${q.pets === 1 ? "pet" : "pets"})`, amount: q.petFee });
   return rows;

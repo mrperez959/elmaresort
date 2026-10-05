@@ -15,6 +15,7 @@ type Props = { stay: StayRequest; user: PublicUser | null; policy: PolicyId; che
 export function Checkout({ stay, user, policy, checkInHour }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [booked, setBooked] = useState<Extract<BookResult, { state: "confirmed" }> | null>(null);
@@ -27,6 +28,7 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
     children: String(stay.children),
     infants: String(stay.infants),
     pets: String(stay.pets),
+    ...(stay.promo ? { promo: stay.promo } : {}),
   })}#book`;
 
   useEffect(() => {
@@ -42,7 +44,10 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) setQuoteError(body.error ?? "The price couldn't be calculated.");
-        else setQuote(body.quote);
+        else {
+          setQuote(body.quote);
+          setPromoError(body.promoError ? `Promo code not applied: ${body.promoError}` : null);
+        }
       })
       .catch(() => setQuoteError("The price couldn't be calculated. Try again."));
   }, [stay]);
@@ -64,6 +69,8 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...stay,
+          // Only send the code if it was accepted for this price.
+          promo: quote.promoDiscount?.code,
           sourceId,
           idempotencyKey: crypto.randomUUID(),
           expectedTotal: quote.total,
@@ -142,7 +149,10 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
         ) : !quote ? (
           <p className="notice">Calculating your total…</p>
         ) : (
-          <FullInvoice quote={quote} />
+          <>
+            {promoError && <p className="notice error">{promoError}</p>}
+            <FullInvoice quote={quote} />
+          </>
         )}
 
         <h2 className="invoice-heading">Cancellation policy: {POLICIES[policy].name}</h2>
