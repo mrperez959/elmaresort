@@ -2496,3 +2496,24 @@ a {
 .admin-blocks .admin-form {
   margin-bottom: 12px;
 }
+
+/* Photo viewer: vertical gestures stay with the browser, sideways ones change photo. */
+.lb-figure {
+  touch-action: pan-y pinch-zoom;
+  animation: lb-in 0.18s ease-out;
+}
+
+@keyframes lb-in {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lb-figure {
+    animation: none;
+  }
+}

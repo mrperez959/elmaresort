@@ -74,6 +74,28 @@ export function Gallery({ photos }: { photos: Photo[] }) {
     };
   }, [step]);
 
+  // Swipe in the photo viewer: left = next photo, right = previous.
+  const touch = useRef<{ x: number; y: number; t: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) {
+      touch.current = null; // pinch-zoom, not a swipe
+      return;
+    }
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touch.current;
+    touch.current = null;
+    if (!start || e.changedTouches.length !== 1) return;
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+    const fast = Date.now() - start.t < 600;
+    // Mostly sideways and long enough (or quick enough) to be a deliberate swipe.
+    if (Math.abs(dx) > Math.abs(dy) * 1.5 && (Math.abs(dx) > 60 || (fast && Math.abs(dx) > 35))) {
+      step(dx < 0 ? 1 : -1);
+    }
+  };
+
   const featured = photos.slice(0, 5);
 
   return (
@@ -92,7 +114,7 @@ export function Gallery({ photos }: { photos: Photo[] }) {
       <dialog ref={dialog} className="lightbox" aria-label={l("Photo viewer", "Visor de fotos")}>
         {open !== null && (
           <>
-            <figure>
+            <figure key={open} className="lb-figure" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
               <Img photo={photos[open]} size="lg" priority />
               <figcaption>
                 {lang === "es" ? photos[open].altEs : photos[open].alt}
