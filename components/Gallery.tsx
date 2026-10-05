@@ -58,42 +58,97 @@ export function Gallery({ photos }: { photos: Photo[] }) {
     [photos.length],
   );
 
+  // ---------- Slide animation and swipe ----------
+  // The viewer shows a strip of three photos (previous, current, next) and
+  // moves it with the finger. Letting go past the threshold slides to the
+  // neighbour; otherwise it springs back.
+  const viewport = useRef<HTMLDivElement>(null);
+  const [dragX, setDragX] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const busy = useRef(false);
+  const SLIDE_MS = 260;
+
+  const reducedMotion = () =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const go = useCallback(
+    (dir: 1 | -1) => {
+      if (busy.current) return;
+      if (reducedMotion()) {
+        step(dir);
+        setDragX(0);
+        return;
+      }
+      busy.current = true;
+      const w = viewport.current?.clientWidth ?? window.innerWidth;
+      setAnimating(true);
+      setDragX(dir === 1 ? -w : w);
+      window.setTimeout(() => {
+        // Swap the photos and recenter in the same render: no visible jump.
+        setAnimating(false);
+        step(dir);
+        setDragX(0);
+        busy.current = false;
+      }, SLIDE_MS);
+    },
+    [step],
+  );
+
+  const springBack = () => {
+    setAnimating(true);
+    setDragX(0);
+    window.setTimeout(() => setAnimating(false), SLIDE_MS);
+  };
+
   useEffect(() => {
     const el = dialog.current;
     if (!el) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") step(1);
-      if (e.key === "ArrowLeft") step(-1);
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
     };
-    const onClose = () => setOpen(null);
+    const onClose = () => {
+      setOpen(null);
+      setDragX(0);
+      setAnimating(false);
+      busy.current = false;
+    };
     el.addEventListener("keydown", onKey);
     el.addEventListener("close", onClose);
     return () => {
       el.removeEventListener("keydown", onKey);
       el.removeEventListener("close", onClose);
     };
-  }, [step]);
+  }, [go]);
 
-  // Swipe in the photo viewer: left = next photo, right = previous.
-  const touch = useRef<{ x: number; y: number; t: number } | null>(null);
+  const touch = useRef<{ x: number; y: number; t: number; axis: "x" | "y" | null } | null>(null);
+
   const onTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) {
-      touch.current = null; // pinch-zoom, not a swipe
+    if (busy.current || e.touches.length !== 1) {
+      touch.current = null; // pinch-zoom or mid-animation: not a swipe
       return;
     }
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), axis: null };
   };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = touch.current;
+    if (!t || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - t.x;
+    const dy = e.touches[0].clientY - t.y;
+    if (!t.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) t.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    if (t.axis === "x") setDragX(dx); // the photo follows the finger
+  };
+
   const onTouchEnd = (e: React.TouchEvent) => {
-    const start = touch.current;
+    const t = touch.current;
     touch.current = null;
-    if (!start || e.changedTouches.length !== 1) return;
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = e.changedTouches[0].clientY - start.y;
-    const fast = Date.now() - start.t < 600;
-    // Mostly sideways and long enough (or quick enough) to be a deliberate swipe.
-    if (Math.abs(dx) > Math.abs(dy) * 1.5 && (Math.abs(dx) > 60 || (fast && Math.abs(dx) > 35))) {
-      step(dx < 0 ? 1 : -1);
-    }
+    if (!t || t.axis !== "x" || e.changedTouches.length !== 1) return;
+    const dx = e.changedTouches[0].clientX - t.x;
+    const w = viewport.current?.clientWidth ?? window.innerWidth;
+    const fast = Date.now() - t.t < 300;
+    if (Math.abs(dx) > w * 0.2 || (fast && Math.abs(dx) > 35)) go(dx < 0 ? 1 : -1);
+    else springBack();
   };
 
   const featured = photos.slice(0, 5);
@@ -114,22 +169,41 @@ export function Gallery({ photos }: { photos: Photo[] }) {
       <dialog ref={dialog} className="lightbox" aria-label={l("Photo viewer", "Visor de fotos")}>
         {open !== null && (
           <>
-            <figure key={open} className="lb-figure" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-              <Img photo={photos[open]} size="lg" priority />
-              <figcaption>
-                {lang === "es" ? photos[open].altEs : photos[open].alt}
-                <span className="count">
-                  {open + 1} {l("of", "de")} {photos.length}
-                </span>
-              </figcaption>
-            </figure>
+            <div
+              ref={viewport}
+              className="lb-viewport"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onTouchCancel={springBack}
+            >
+              <div
+                className={`lb-track${animating ? " animating" : ""}`}
+                style={{ transform: `translateX(calc(-100% / 3 + ${dragX}px))` }}
+              >
+                {[-1, 0, 1].map((offset) => {
+                  const i = (open + offset + photos.length) % photos.length;
+                  return (
+                    <div key={`${offset}:${i}`} className="lb-slide" aria-hidden={offset !== 0}>
+                      <Img photo={photos[i]} size="lg" priority />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <p className="lb-caption">
+              {lang === "es" ? photos[open].altEs : photos[open].alt}
+              <span className="count">
+                {open + 1} {l("of", "de")} {photos.length}
+              </span>
+            </p>
             <button type="button" className="lb-close" onClick={close} aria-label={l("Close photos", "Cerrar fotos")}>
               ×
             </button>
-            <button type="button" className="lb-prev" onClick={() => step(-1)} aria-label={l("Previous photo", "Foto anterior")}>
+            <button type="button" className="lb-prev" onClick={() => go(-1)} aria-label={l("Previous photo", "Foto anterior")}>
               ‹
             </button>
-            <button type="button" className="lb-next" onClick={() => step(1)} aria-label={l("Next photo", "Foto siguiente")}>
+            <button type="button" className="lb-next" onClick={() => go(1)} aria-label={l("Next photo", "Foto siguiente")}>
               ›
             </button>
           </>

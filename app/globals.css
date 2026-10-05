@@ -2497,23 +2497,75 @@ a {
   margin-bottom: 12px;
 }
 
-/* Photo viewer: vertical gestures stay with the browser, sideways ones change photo. */
-.lb-figure {
+/* Photo viewer: a strip of three photos that follows the finger. */
+.lb-viewport {
+  position: absolute;
+  inset: 64px 0 72px;
+  overflow: hidden;
   touch-action: pan-y pinch-zoom;
-  animation: lb-in 0.18s ease-out;
 }
 
-@keyframes lb-in {
-  from {
-    opacity: 0.4;
+.lb-track {
+  display: flex;
+  width: 300%;
+  height: 100%;
+  will-change: transform;
+}
+
+.lb-track.animating {
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.lb-slide {
+  flex: none;
+  width: calc(100% / 3);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 72px;
+}
+
+.lightbox .lb-slide img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lb-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 0.95rem;
+  max-width: 80ch;
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .lb-slide {
+    padding: 0 8px;
   }
-  to {
-    opacity: 1;
+  .lb-viewport {
+    inset: 64px 0 96px;
+  }
+  .lb-caption {
+    bottom: 72px;
+    font-size: 0.85rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lb-figure {
-    animation: none;
+  .lb-track.animating {
+    transition: none;
   }
 }
