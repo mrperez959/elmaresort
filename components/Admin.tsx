@@ -110,7 +110,19 @@ function fromForm(f: Form): Record<string, unknown> {
     if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy") out[k] = v;
     else if (k === "taxesConfigured") continue;
     else if (
-      ["contactWhatsApp", "contactPhone", "contactEmail", "propertyAddress", "checkInInstructions", "approxArea", "mapCenter"].includes(k)
+      [
+        "contactWhatsApp",
+        "contactPhone",
+        "contactEmail",
+        "propertyAddress",
+        "checkInInstructions",
+        "checkInInstructionsEs",
+        "houseRules",
+        "houseRulesEs",
+        "reviewLink",
+        "approxArea",
+        "mapCenter",
+      ].includes(k)
     )
       out[k] = v;
     else if (k === "taxes") {
@@ -397,14 +409,27 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           </span>
         </label>
         <label className="field wide-field">
-          <span className="field-label">Check-in instructions (private)</span>
+          <span className="field-label">Check-in day message, English (private)</span>
           <textarea
-            rows={5}
+            rows={10}
             value={form.checkInInstructions}
-            placeholder={"Door code, where to park, wifi name and password, trash day…"}
+            placeholder={"Hi {first_name}.\n\nIt would be my pleasure to welcome you to our home located at {address}…"}
             onChange={(e) => set("checkInInstructions")(e.target.value)}
           />
-          <span className="field-hint">Shown together with the address, from check-in day.</span>
+          <span className="field-hint">
+            Emailed to the guest on the morning of check-in and shown on their trip page from that day. {"{first_name}"} and{" "}
+            {"{address}"} are filled in automatically.
+          </span>
+        </label>
+        <label className="field wide-field">
+          <span className="field-label">Check-in day message, Spanish (optional)</span>
+          <textarea
+            rows={6}
+            value={form.checkInInstructionsEs}
+            placeholder={"Hola {first_name}.\n\nSerá un placer recibirte en nuestra casa en {address}…"}
+            onChange={(e) => set("checkInInstructionsEs")(e.target.value)}
+          />
+          <span className="field-hint">For guests using the site in Spanish. If empty, they get the English one.</span>
         </label>
         <label className="field wide-field">
           <span className="field-label">Area shown on the public map</span>
@@ -425,6 +450,22 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           </span>
         </label>
         <Field label="Map zoom" hint="15 = the canals around the house, 14 = wider, 16 = closer" value={form.mapZoom} onChange={set("mapZoom")} />
+      </fieldset>
+
+      <fieldset>
+        <legend>House rules</legend>
+        <label className="field wide-field">
+          <span className="field-label">House rules, English (one per line)</span>
+          <textarea rows={4} value={form.houseRules} onChange={(e) => set("houseRules")(e.target.value)} />
+        </label>
+        <label className="field wide-field">
+          <span className="field-label">House rules, Spanish (one per line)</span>
+          <textarea rows={4} value={form.houseRulesEs} onChange={(e) => set("houseRulesEs")(e.target.value)} />
+          <span className="field-hint">
+            Check-in times, maximum guests and pets are added automatically. Guests accept these rules and the rental
+            agreement before paying.
+          </span>
+        </label>
       </fieldset>
 
       <fieldset>
@@ -452,6 +493,16 @@ export function AdminSettings({ initial }: { initial: Settings }) {
 
       <fieldset>
         <legend>Reviews summary</legend>
+        <label className="field wide-field">
+          <span className="field-label">Where guests can leave a review (optional)</span>
+          <span className="field-input">
+            <input value={form.reviewLink} placeholder="https://g.page/r/..." onChange={(e) => set("reviewLink")(e.target.value)} />
+          </span>
+          <span className="field-hint">
+            Sent in the thank-you email the day after check-out (for example your Google review link). If empty, the
+            email asks them to reply with their feedback.
+          </span>
+        </label>
         <Field label="Overall rating" hint="As shown on your listing, e.g. 4.92" suffix="★" value={form.reviewsAverage} onChange={set("reviewsAverage")} />
         <Field label="Number of reviews" value={form.reviewsCount} onChange={set("reviewsCount")} />
         <label className="field">
@@ -630,6 +681,94 @@ export function AdminCancel({ code }: { code: string }) {
       <button type="button" className="link" disabled={busy} onClick={() => run(true)}>
         Cancel (full refund)
       </button>
+    </div>
+  );
+}
+
+export function AdminBlocks({ blocks }: { blocks: Array<{ id: string; start: string; end: string; note: string }> }) {
+  const router = useRouter();
+  const [form, setForm] = useState({ start: "", end: "", note: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const r = await fetch("/api/admin/blocks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Couldn't block those dates.");
+    setForm({ start: "", end: "", note: "" });
+    router.refresh();
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Open these dates again?")) return;
+    await fetch(`/api/admin/blocks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  return (
+    <div className="admin-blocks">
+      <form className="admin-form" onSubmit={add}>
+        <fieldset>
+          <legend>Block dates</legend>
+          <label className="field">
+            <span className="field-label">First night</span>
+            <span className="field-input">
+              <input type="date" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} required />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Until (check-out day)</span>
+            <span className="field-input">
+              <input type="date" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} required />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Note</span>
+            <span className="field-input">
+              <input value={form.note} placeholder="Family, maintenance, phone booking…" onChange={(e) => setForm({ ...form, note: e.target.value })} />
+            </span>
+          </label>
+          <p className="field-hint wide">
+            Blocked dates close on this site right away and go out in the calendar link to Hospitable, which closes them
+            on Airbnb and Vrbo.
+          </p>
+          {error && (
+            <p className="notice error wide" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="wide">
+            <button className="pay" type="submit" disabled={busy}>
+              {busy ? "Saving…" : "Block these dates"}
+            </button>
+          </div>
+        </fieldset>
+      </form>
+      {blocks.length > 0 && (
+        <ul className="admin-review-list">
+          {blocks.map((b) => (
+            <li key={b.id}>
+              <div>
+                <strong>
+                  {b.start} → {b.end}
+                </strong>
+                {b.note && <p>{b.note}</p>}
+              </div>
+              <button type="button" className="link" onClick={() => remove(b.id)}>
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

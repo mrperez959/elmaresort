@@ -4,6 +4,7 @@ import { Checkout } from "@/components/Checkout";
 import { currentUser } from "@/lib/auth";
 import { parseStayRequest, QuoteError } from "@/lib/quote";
 import { getSettings } from "@/lib/settings";
+import { getL } from "@/lib/lang-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Confirm and pay" };
@@ -18,12 +19,12 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     throw err;
   }
   if (stay.adults < 1) stay.adults = 1;
-  const [user, settings] = await Promise.all([currentUser(), getSettings()]);
+  const [user, settings, { l }] = await Promise.all([currentUser(), getSettings(), getL()]);
 
   return (
     <main className="page">
       <SiteHeader user={user} showTagline={false} />
-      <h1 className="checkout-title">Confirm and pay</h1>
+      <h1 className="checkout-title">{l("Confirm and pay", "Confirma y paga")}</h1>
       <Checkout stay={stay} user={user} policy={settings.cancellationPolicy} checkInHour={settings.checkInHour} />
     </main>
   );

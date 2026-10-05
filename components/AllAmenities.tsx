@@ -2,25 +2,28 @@
 
 import { useState } from "react";
 import { AMENITY_ICONS } from "./amenity-icons";
-import type { AmenityIcon } from "@/lib/property";
+import { useL } from "./LangProvider";
+import type { Amenity } from "@/lib/property";
 
 const VISIBLE = 9;
 
-export function AllAmenities({ items }: { items: Array<{ icon: AmenityIcon; title: string; detail?: string }> }) {
+export function AllAmenities({ items }: { items: Amenity[] }) {
+  const { lang, l } = useL();
   const [open, setOpen] = useState(false);
   const shown = open ? items : items.slice(0, VISIBLE);
   return (
     <div className="all-amenities">
-      <h3 className="all-amenities-title">Everything in the house</h3>
+      <h3 className="all-amenities-title">{l("Everything in the house", "Todo lo que hay en la casa")}</h3>
       <ul id="all-amenities-list">
         {shown.map((a) => {
           const Icon = AMENITY_ICONS[a.icon];
+          const detail = lang === "es" ? a.detailEs : a.detail;
           return (
             <li key={a.title}>
               <Icon size={20} strokeWidth={1.6} aria-hidden="true" />
               <span>
-                {a.title}
-                {a.detail && <small>{a.detail}</small>}
+                {lang === "es" ? a.titleEs : a.title}
+                {detail && <small>{detail}</small>}
               </span>
             </li>
           );
@@ -34,7 +37,7 @@ export function AllAmenities({ items }: { items: Array<{ icon: AmenityIcon; titl
           aria-controls="all-amenities-list"
           onClick={() => setOpen(!open)}
         >
-          {open ? "Show fewer" : `Show all ${items.length} amenities`}
+          {open ? l("Show fewer", "Ver menos") : l(`Show all ${items.length} amenities`, `Ver las ${items.length} comodidades`)}
         </button>
       )}
     </div>

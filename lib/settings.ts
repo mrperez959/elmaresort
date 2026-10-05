@@ -33,6 +33,10 @@ export const DEFAULT_SETTINGS: Settings = {
   contactEmail: "",
   propertyAddress: "",
   checkInInstructions: "",
+  checkInInstructionsEs: "",
+  houseRules: "No smoking inside the house.",
+  houseRulesEs: "No se permite fumar dentro de la casa.",
+  reviewLink: "",
   approxArea: "Town 'n' Country, Tampa, FL",
   mapCenter: "",
   mapZoom: 15,
@@ -99,6 +103,18 @@ function latLng(v: unknown): string {
   }
   // Kept as the owner entered it (up to 6 decimals): the owner picks the point to show.
   return `${Number(lat.toFixed(6))}, ${Number(lng.toFixed(6))}`;
+}
+
+function url(v: unknown): string {
+  const raw = String(v ?? "").trim();
+  if (!raw) return "";
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") throw new Error();
+    return u.toString().slice(0, 500);
+  } catch {
+    throw new SettingsError("Review link must be a full https:// link.");
+  }
 }
 
 function email(v: unknown): string {
@@ -185,7 +201,11 @@ export function validateSettings(raw: unknown): Settings {
     contactPhone: phone(input.contactPhone, "Phone number"),
     contactEmail: email(input.contactEmail),
     propertyAddress: String(input.propertyAddress ?? "").trim().slice(0, 300),
-    checkInInstructions: String(input.checkInInstructions ?? "").trim().slice(0, 4000),
+    checkInInstructions: String(input.checkInInstructions ?? "").trim().slice(0, 6000),
+    checkInInstructionsEs: String(input.checkInInstructionsEs ?? "").trim().slice(0, 6000),
+    houseRules: String(input.houseRules ?? "").trim().slice(0, 3000) || DEFAULT_SETTINGS.houseRules,
+    houseRulesEs: String(input.houseRulesEs ?? "").trim().slice(0, 3000) || DEFAULT_SETTINGS.houseRulesEs,
+    reviewLink: url(input.reviewLink),
     approxArea: String(input.approxArea ?? "").trim().slice(0, 120) || DEFAULT_SETTINGS.approxArea,
     mapCenter: latLng(input.mapCenter),
     mapZoom: int(input, "mapZoom", 11, 16),

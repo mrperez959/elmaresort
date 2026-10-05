@@ -96,6 +96,24 @@ export async function buildExportCalendar(): Promise<string> {
       "END:VEVENT",
     ];
   });
+  // Owner blocks go out too, so Hospitable/Airbnb/Vrbo close those dates.
+  const blocks = await query<{ id: string; start: string; end: string; note: string }>(
+    `SELECT id, to_char(start_date, 'YYYY-MM-DD') AS start, to_char(end_date, 'YYYY-MM-DD') AS "end", note
+     FROM owner_blocks WHERE end_date >= CURRENT_DATE - 30`,
+  );
+  for (const b of blocks) {
+    events.push([
+      "BEGIN:VEVENT",
+      `UID:block-${b.id}@elmaresort`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${ics(b.start)}`,
+      `DTEND;VALUE=DATE:${ics(b.end)}`,
+      `SUMMARY:${text(b.note ? `Blocked: ${b.note}` : "Blocked by owner")}`,
+      "TRANSP:OPAQUE",
+      "END:VEVENT",
+    ]);
+  }
+
   // A calendar with no events is invalid (RFC 5545 needs at least one), and some
   // importers reject it. Until there are real bookings, publish one night far in
   // the past: it blocks nothing.

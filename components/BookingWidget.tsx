@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Month } from "./Calendar";
 import { PriceBeforeTaxes } from "./Invoice";
 import { Stepper } from "./Stepper";
-import { POLICIES } from "@/lib/policy";
+import { policySummary } from "@/lib/policy";
+import { useL } from "./LangProvider";
 import { track } from "@/lib/track";
 import type { PublicDay, PublicSettings, Quote } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
@@ -25,6 +26,7 @@ function addDays(iso: string, n: number) {
 }
 
 export function BookingWidget({ settings }: Props) {
+  const { lang, l, msg } = useL();
   const params = useSearchParams();
 
   const [days, setDays] = useState<PublicDay[] | null>(null);
@@ -49,7 +51,7 @@ export function BookingWidget({ settings }: Props) {
     fetch("/api/availability")
       .then(async (r) => {
         const body = await r.json();
-        if (!r.ok) throw new Error(body.error ?? "Availability couldn't be loaded.");
+        if (!r.ok) throw new Error(msg(body.error ?? "Availability couldn't be loaded."));
         setDays(body.days);
       })
       .catch((e: Error) => setLoadError(e.message));
@@ -118,15 +120,15 @@ export function BookingWidget({ settings }: Props) {
     })
       .then(async (r) => {
         const body = await r.json();
-        if (!r.ok) setQuoteError(body.error ?? "The price couldn't be calculated.");
+        if (!r.ok) setQuoteError(msg(body.error ?? "The price couldn't be calculated."));
         else {
           setQuote(body.quote);
-          setPromoError(body.promoError ?? null);
+          setPromoError(body.promoError ? msg(body.promoError) : null);
           track("dates_selected", { n: body.quote.nights });
         }
       })
       .catch((e) => {
-        if (e.name !== "AbortError") setQuoteError("The price couldn't be calculated. Try again.");
+        if (e.name !== "AbortError") setQuoteError(msg("The price couldn't be calculated. Try again."));
       })
       .finally(() => setQuoting(false));
     return () => ctrl.abort();
@@ -141,28 +143,37 @@ export function BookingWidget({ settings }: Props) {
 
   const minStayHint =
     checkIn && !checkOut && (dayMap.get(checkIn)?.minStay ?? 1) > 1
-      ? `Stays from ${longDate(checkIn)} need at least ${dayMap.get(checkIn)!.minStay} nights.`
+      ? l(
+          `Stays from ${longDate(checkIn, lang)} need at least ${dayMap.get(checkIn)!.minStay} nights.`,
+          `Las estadías desde el ${longDate(checkIn, lang)} requieren al menos ${dayMap.get(checkIn)!.minStay} noches.`,
+        )
       : null;
 
   const perks: string[] = [];
   if (settings.directDiscountEnabled && settings.directDiscountPercent > 0) {
-    perks.push(`${settings.directDiscountPercent}% off for booking here`);
+    perks.push(l(`${settings.directDiscountPercent}% off for booking here`, `${settings.directDiscountPercent}% menos por reservar aquí`));
   }
-  if (settings.weeklyDiscountPercent > 0) perks.push(`${settings.weeklyDiscountPercent}% off ${settings.weeklyMinNights}+ nights`);
-  if (settings.monthlyDiscountPercent > 0) perks.push(`${settings.monthlyDiscountPercent}% off ${settings.monthlyMinNights}+ nights`);
+  if (settings.weeklyDiscountPercent > 0)
+    perks.push(l(`${settings.weeklyDiscountPercent}% off ${settings.weeklyMinNights}+ nights`, `${settings.weeklyDiscountPercent}% menos en ${settings.weeklyMinNights}+ noches`));
+  if (settings.monthlyDiscountPercent > 0)
+    perks.push(l(`${settings.monthlyDiscountPercent}% off ${settings.monthlyMinNights}+ nights`, `${settings.monthlyDiscountPercent}% menos en ${settings.monthlyMinNights}+ noches`));
 
   return (
     <div className="booking">
       <section className="calendar-panel" aria-labelledby="dates-heading">
         <div className="calendar-head">
           <h2 id="dates-heading">
-            {!checkIn ? "Pick your check-in day" : !checkOut ? "Now pick your check-out day" : "Your dates"}
+            {!checkIn
+              ? l("Pick your check-in day", "Elige el día de llegada")
+              : !checkOut
+                ? l("Now pick your check-out day", "Ahora elige el día de salida")
+                : l("Your dates", "Tus fechas")}
           </h2>
           <div className="calendar-nav">
-            <button type="button" aria-label="Previous months" disabled={monthOffset === 0} onClick={() => setMonthOffset((m) => Math.max(0, m - 2))}>
+            <button type="button" aria-label={l("Previous months", "Meses anteriores")} disabled={monthOffset === 0} onClick={() => setMonthOffset((m) => Math.max(0, m - 2))}>
               ‹
             </button>
-            <button type="button" aria-label="Next months" disabled={lastShown >= lastDate} onClick={() => setMonthOffset((m) => m + 2)}>
+            <button type="button" aria-label={l("Next months", "Meses siguientes")} disabled={lastShown >= lastDate} onClick={() => setMonthOffset((m) => m + 2)}>
               ›
             </button>
           </div>
@@ -170,10 +181,10 @@ export function BookingWidget({ settings }: Props) {
 
         {loadError ? (
           <p className="notice error" role="alert">
-            {loadError} Refresh the page to try again.
+            {loadError} {l("Refresh the page to try again.", "Recarga la página para intentarlo de nuevo.")}
           </p>
         ) : !days ? (
-          <p className="notice">Loading availability…</p>
+          <p className="notice">{l("Loading availability…", "Cargando disponibilidad…")}</p>
         ) : (
           <>
             <div className="months">
@@ -192,24 +203,27 @@ export function BookingWidget({ settings }: Props) {
             </div>
             <div className="legend" aria-hidden="true">
               <span>
-                <i className="swatch open" /> Open, nightly rate below the date (your total with the cleaning fee shows
-                when you pick dates)
+                <i className="swatch open" />{" "}
+                {l(
+                  "Open, nightly rate below the date (your total with the cleaning fee shows when you pick dates)",
+                  "Disponible, precio por noche debajo de la fecha (el total con limpieza aparece al elegir fechas)",
+                )}
               </span>
               <span>
-                <i className="swatch taken" /> Booked
+                <i className="swatch taken" /> {l("Booked", "Reservado")}
               </span>
             </div>
             {minStayHint && <p className="notice">{minStayHint}</p>}
             {days.length === 0 && (
               <p className="notice error" role="alert">
-                No dates are open for online booking right now. Please check back soon.
+                {l("No dates are open for online booking right now. Please check back soon.", "Ahora no hay fechas abiertas para reservar en línea. Vuelve pronto.")}
               </p>
             )}
           </>
         )}
       </section>
 
-      <aside className="summary" aria-label="Your booking">
+      <aside className="summary" aria-label={l("Your booking", "Tu reserva")}>
         {perks.length > 0 && (
           <ul className="perks">
             {perks.map((p) => (
@@ -220,12 +234,12 @@ export function BookingWidget({ settings }: Props) {
 
         <dl className="dates">
           <div>
-            <dt>Check-in</dt>
-            <dd>{checkIn ? longDate(checkIn) : "Add date"}</dd>
+            <dt>{l("Check-in", "Llegada")}</dt>
+            <dd>{checkIn ? longDate(checkIn, lang) : l("Add date", "Agregar fecha")}</dd>
           </div>
           <div>
-            <dt>Check-out</dt>
-            <dd>{checkOut ? longDate(checkOut) : "Add date"}</dd>
+            <dt>{l("Check-out", "Salida")}</dt>
+            <dd>{checkOut ? longDate(checkOut, lang) : l("Add date", "Agregar fecha")}</dd>
           </div>
         </dl>
         {checkIn && (
@@ -237,18 +251,18 @@ export function BookingWidget({ settings }: Props) {
               setCheckOut(null);
             }}
           >
-            Clear dates
+            {l("Clear dates", "Borrar fechas")}
           </button>
         )}
 
         <div className="guests">
-          <Stepper label="Adults" value={adults} min={1} max={settings.maxGuests - children} onChange={setAdults} />
-          <Stepper label="Children" hint="Ages 2–12" value={children} min={0} max={Math.max(0, settings.maxGuests - adults)} onChange={setChildren} />
-          <Stepper label="Infants" hint="Under 2" value={infants} min={0} max={5} onChange={setInfants} />
+          <Stepper label={l("Adults", "Adultos")} value={adults} min={1} max={settings.maxGuests - children} onChange={setAdults} />
+          <Stepper label={l("Children", "Niños")} hint={l("Ages 2–12", "De 2 a 12 años")} value={children} min={0} max={Math.max(0, settings.maxGuests - adults)} onChange={setChildren} />
+          <Stepper label={l("Infants", "Bebés")} hint={l("Under 2", "Menores de 2")} value={infants} min={0} max={5} onChange={setInfants} />
           {settings.maxPets > 0 && (
             <Stepper
-              label="Pets"
-              hint={`${money(settings.petFee)} per stay`}
+              label={l("Pets", "Mascotas")}
+              hint={l(`${money(settings.petFee)} per stay`, `${money(settings.petFee)} por estadía`)}
               value={pets}
               min={0}
               max={settings.maxPets}
@@ -256,13 +270,16 @@ export function BookingWidget({ settings }: Props) {
             />
           )}
         </div>
-        <p className="fine">Up to {settings.maxGuests} guests, not counting infants.</p>
+        <p className="fine">
+          {l(`Up to ${settings.maxGuests} guests, not counting infants.`, `Hasta ${settings.maxGuests} huéspedes, sin contar bebés.`)}
+        </p>
 
         <div className="promo">
           {promo && quote?.promoDiscount ? (
             <p className="promo-applied">
               <span>
-                <strong>{quote.promoDiscount.code}</strong> applied: {quote.promoDiscount.percent}% off
+                <strong>{quote.promoDiscount.code}</strong>{" "}
+                {l(`applied: ${quote.promoDiscount.percent}% off`, `aplicado: ${quote.promoDiscount.percent}% de descuento`)}
               </span>
               <button
                 type="button"
@@ -273,12 +290,12 @@ export function BookingWidget({ settings }: Props) {
                   setPromoError(null);
                 }}
               >
-                Remove
+                {l("Remove", "Quitar")}
               </button>
             </p>
           ) : !promoOpen ? (
             <button type="button" className="link" onClick={() => setPromoOpen(true)}>
-              Have a promo code?
+              {l("Have a promo code?", "¿Tienes un código promocional?")}
             </button>
           ) : (
             <form
@@ -287,11 +304,11 @@ export function BookingWidget({ settings }: Props) {
                 e.preventDefault();
                 setPromoError(null);
                 setPromo(promoInput.trim().toUpperCase());
-                if (!checkIn || !checkOut) setPromoError("Pick your dates and the code will be applied.");
+                if (!checkIn || !checkOut) setPromoError(l("Pick your dates and the code will be applied.", "Elige tus fechas y el código se aplicará."));
               }}
             >
               <label className="field">
-                <span className="field-label">Promo code</span>
+                <span className="field-label">{l("Promo code", "Código promocional")}</span>
                 <span className="field-input">
                   <input
                     value={promoInput}
@@ -304,7 +321,7 @@ export function BookingWidget({ settings }: Props) {
                 </span>
               </label>
               <button type="submit" className="promo-apply" disabled={!promoInput.trim()}>
-                Apply
+                {l("Apply", "Aplicar")}
               </button>
             </form>
           )}
@@ -315,8 +332,8 @@ export function BookingWidget({ settings }: Props) {
           )}
         </div>
 
-        {!settings.bookingOpen && <p className="notice">Online booking opens soon.</p>}
-        {quoting && <p className="notice">Calculating your total…</p>}
+        {!settings.bookingOpen && <p className="notice">{l("Online booking opens soon.", "La reserva en línea abre pronto.")}</p>}
+        {quoting && <p className="notice">{l("Calculating your total…", "Calculando tu total…")}</p>}
         {quoteError && (
           <p className="notice error" role="alert">
             {quoteError}
@@ -339,10 +356,11 @@ export function BookingWidget({ settings }: Props) {
                 ...(quote.promoDiscount ? { promo: quote.promoDiscount.code } : {}),
               })}`}
             >
-              Continue to checkout
+              {l("Continue to checkout", "Continuar al pago")}
             </Link>
             <p className="fine center">
-              You won&apos;t be charged yet. {POLICIES[settings.cancellationPolicy].summary.split(". ")[0]}.
+              {l("You won't be charged yet.", "Todavía no se te cobra nada.")}{" "}
+              {policySummary(settings.cancellationPolicy, lang).split(". ")[0]}.
             </p>
           </>
         )}

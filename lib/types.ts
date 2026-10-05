@@ -54,8 +54,17 @@ export type Settings = {
   contactEmail: string;
   /** PRIVATE: shown only to the guest, on their trip page, from check-in day */
   propertyAddress: string;
-  /** PRIVATE: door code, parking, wifi... same visibility as the address */
+  /**
+   * PRIVATE: the check-in day message (door code, wifi...). Same visibility as the
+   * address. Placeholders: {first_name} {address}. Emailed on check-in morning.
+   */
   checkInInstructions: string;
+  checkInInstructionsEs: string;
+  /** One rule per line, shown on /house-rules and accepted at checkout */
+  houseRules: string;
+  houseRulesEs: string;
+  /** Optional link where guests can leave a review (e.g. Google), used in the after-stay email */
+  reviewLink: string;
   /** Public, approximate: area name shown next to the map */
   approxArea: string;
   /** Public, approximate: "lat, lng" of a point NEAR the house (not the house). "" = center on approxArea */
@@ -125,6 +134,7 @@ export type PublicUser = {
   email: string;
   phone: string;
   emailVerified: boolean;
+  lang: "en" | "es";
 };
 
 export type BookingSummary = {

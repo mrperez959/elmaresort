@@ -73,6 +73,24 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
   const [form, setForm] = useState<Form | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [payout, setPayout] = useState<{ code: string; amount: string; paidOn: string; note: string } | null>(null);
+
+  async function savePayout(e: React.FormEvent) {
+    e.preventDefault();
+    if (!payout) return;
+    setBusy(true);
+    setError(null);
+    const r = await fetch("/api/admin/payouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payout),
+    });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Couldn't save.");
+    setPayout(null);
+    router.refresh();
+  }
 
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(form && { ...form, [k]: k === "code" ? e.target.value.toUpperCase() : e.target.value });
@@ -95,8 +113,13 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
   }
 
   const totals = initial.reduce(
-    (a, p) => ({ bookings: a.bookings + p.bookings, sales: a.sales + p.sales, commission: a.commission + p.commission }),
-    { bookings: 0, sales: 0, commission: 0 },
+    (a, p) => ({
+      bookings: a.bookings + p.bookings,
+      sales: a.sales + p.sales,
+      commission: a.commission + p.commission,
+      paid: a.paid + p.paid,
+    }),
+    { bookings: 0, sales: 0, commission: 0, paid: 0 },
   );
 
   return (
@@ -201,6 +224,46 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
         </form>
       )}
 
+      {payout && (
+        <form className="admin-form" onSubmit={savePayout}>
+          <fieldset>
+            <legend>Record a payment to {payout.code}</legend>
+            <label className="field">
+              <span className="field-label">Amount paid</span>
+              <span className="field-input">
+                <span className="affix">$</span>
+                <input inputMode="decimal" value={payout.amount} onChange={(e) => setPayout({ ...payout, amount: e.target.value })} />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Paid on</span>
+              <span className="field-input">
+                <input type="date" value={payout.paidOn} onChange={(e) => setPayout({ ...payout, paidOn: e.target.value })} />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Note (optional)</span>
+              <span className="field-input">
+                <input value={payout.note} placeholder="Zelle, check #…" onChange={(e) => setPayout({ ...payout, note: e.target.value })} />
+              </span>
+            </label>
+            {error && (
+              <p className="notice error wide" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="wide admin-actions">
+              <button className="pay" type="submit" disabled={busy}>
+                {busy ? "Saving…" : "Save payment"}
+              </button>
+              <button type="button" className="link" onClick={() => setPayout(null)}>
+                Cancel
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      )}
+
       {initial.length > 0 ? (
         <>
           <div className="table-wrap">
@@ -213,7 +276,9 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
                   <th>When</th>
                   <th>Bookings</th>
                   <th>Sales</th>
-                  <th>Commission owed</th>
+                  <th>Commission</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
                   <th></th>
                 </tr>
               </thead>
@@ -252,12 +317,28 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
                       </td>
                       <td>{p.bookings}</td>
                       <td>{money(p.sales)}</td>
+                      <td>{money(p.commission)}</td>
+                      <td>{money(p.paid)}</td>
                       <td>
-                        <strong>{money(p.commission)}</strong>
+                        <strong>{money(p.commission - p.paid)}</strong>
                       </td>
-                      <td>
+                      <td className="row-actions">
                         <button type="button" className="link" onClick={() => setForm(toForm(p))}>
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="link"
+                          onClick={() =>
+                            setPayout({
+                              code: p.code,
+                              amount: Math.max(0, (p.commission - p.paid) / 100).toFixed(2),
+                              paidOn: today,
+                              note: "",
+                            })
+                          }
+                        >
+                          Record payment
                         </button>
                       </td>
                     </tr>
@@ -270,6 +351,8 @@ export function PromoManager({ initial, siteUrl, today }: { initial: PromoStats[
                   <th>{totals.bookings}</th>
                   <th>{money(totals.sales)}</th>
                   <th>{money(totals.commission)}</th>
+                  <th>{money(totals.paid)}</th>
+                  <th>{money(totals.commission - totals.paid)}</th>
                   <th></th>
                 </tr>
               </tfoot>

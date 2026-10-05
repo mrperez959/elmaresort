@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (!user) return fail("Sign in again.", 401);
   if (user.emailVerified) return Response.json({ ok: true });
   try {
-    await sendCode(user.email, "verify", clientIp(req));
+    await sendCode(user.email, "verify", clientIp(req), user.lang);
     return Response.json({ ok: true });
   } catch (err) {
     if (err instanceof CodeError) return fail(err.message, 429);

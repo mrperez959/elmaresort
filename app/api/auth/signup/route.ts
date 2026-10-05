@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   const email = String(b.email ?? "").trim().slice(0, 200);
   const phone = normalizePhone(String(b.phone ?? ""));
   const password = String(b.password ?? "");
+  const lang = b.lang === "es" ? "es" : "en";
 
   if (!firstName || !lastName) return fail("Enter your first and last name.");
   if (!EMAIL.test(email)) return fail("Enter a valid email address.");
@@ -28,10 +29,10 @@ export async function POST(req: Request) {
   if (weak) return fail(weak);
 
   try {
-    const user = await createUser({ email, firstName, lastName, phone, passwordHash: await hashPassword(password) });
+    const user = await createUser({ email, firstName, lastName, phone, lang, passwordHash: await hashPassword(password) });
     if (!user) return fail("There's already an account with that email. Sign in instead.", 409);
     await startGuestSession(user.id, 1);
-    await sendCode(user.email, "verify", ip);
+    await sendCode(user.email, "verify", ip, lang);
     return Response.json({ ok: true, needsVerification: true });
   } catch (err) {
     if (err instanceof CodeError) return fail(err.message, 429);

@@ -2,8 +2,9 @@
 
 import type { PublicDay } from "@/lib/types";
 import { a11yDate, monthLabel, moneyShort } from "@/lib/format";
+import { useL } from "./LangProvider";
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAYS = { en: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"], es: ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"] };
 
 type Props = {
   year: number;
@@ -21,6 +22,7 @@ function iso(year: number, month: number, day: number) {
 }
 
 export function Month({ year, month, dayMap, today, checkIn, checkOut, isSelectable, onSelect }: Props) {
+  const { lang, l } = useL();
   const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 
@@ -29,9 +31,9 @@ export function Month({ year, month, dayMap, today, checkIn, checkOut, isSelecta
 
   return (
     <div className="month">
-      <h3 className="month-name">{monthLabel(year, month)}</h3>
-      <div className="grid" role="grid" aria-label={monthLabel(year, month)}>
-        {WEEKDAYS.map((w) => (
+      <h3 className="month-name">{monthLabel(year, month, lang)}</h3>
+      <div className="grid" role="grid" aria-label={monthLabel(year, month, lang)}>
+        {WEEKDAYS[lang].map((w) => (
           <div key={w} className="weekday" aria-hidden="true">
             {w}
           </div>
@@ -58,7 +60,7 @@ export function Month({ year, month, dayMap, today, checkIn, checkOut, isSelecta
             .filter(Boolean)
             .join(" ");
 
-          const status = past ? "past" : booked ? "booked" : day ? moneyShort(day.price) : "";
+          const status = past ? l("past", "pasado") : booked ? l("booked", "reservado") : day ? moneyShort(day.price) : "";
           return (
             <button
               key={date}
@@ -66,7 +68,7 @@ export function Month({ year, month, dayMap, today, checkIn, checkOut, isSelecta
               className={classes}
               disabled={!selectable}
               aria-pressed={isStart || isEnd || inRange}
-              aria-label={`${a11yDate(date)}, ${status}${isStart ? ", check-in" : ""}${isEnd ? ", check-out" : ""}`}
+              aria-label={`${a11yDate(date, lang)}, ${status}${isStart ? l(", check-in", ", llegada") : ""}${isEnd ? l(", check-out", ", salida") : ""}`}
               onClick={() => onSelect(date)}
             >
               <span className="num">{Number(date.slice(8))}</span>

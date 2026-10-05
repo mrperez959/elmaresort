@@ -2,6 +2,7 @@ import { bookStay } from "@/lib/booking";
 import { parseStayRequest, QuoteError } from "@/lib/quote";
 import { currentUser, isJsonRequest } from "@/lib/auth";
 import { allow, clientIp } from "@/lib/ratelimit";
+import { alertOwner } from "@/lib/alerts";
 import type { BookResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export async function POST(req: Request) {
       return reply({ state: "error", message: "Too many payment attempts. Please wait an hour or contact us." }, 429);
     }
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (body?.agreed !== true) {
+      return reply({ state: "error", message: "Please accept the house rules and the rental agreement to book." }, 400);
+    }
     const stay = parseStayRequest(body);
     const sourceId = String(body?.sourceId ?? "");
     const idempotencyKey = String(body?.idempotencyKey ?? "");
@@ -32,13 +36,21 @@ export async function POST(req: Request) {
       return reply({ state: "error", message: "Payment details are missing. Try again." }, 400);
     }
 
-    const result = await bookStay({ stay, guest, sourceId, idempotencyKey, expectedTotal });
+    const result = await bookStay({
+      stay,
+      guest,
+      sourceId,
+      idempotencyKey,
+      expectedTotal,
+      agreement: { ip: clientIp(req), userAgent: (req.headers.get("user-agent") ?? "").slice(0, 300) },
+    });
     return reply(result, result.state === "confirmed" ? 200 : 409);
   } catch (err) {
     if (err instanceof QuoteError) return reply({ state: "error", message: err.message }, 400);
     // Log the provider's own error details (Square puts them in `errors`).
     const details = (err as { errors?: unknown; statusCode?: number }) ?? {};
     console.error("[book] failed", details.statusCode ?? "", JSON.stringify(details.errors ?? null), err);
+    await alertOwner("booking payment", err);
     return reply(
       {
         state: "error",

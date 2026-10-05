@@ -172,14 +172,14 @@ export async function updatePromo(id: string, raw: unknown): Promise<Promo> {
   return toPromo(rows[0]);
 }
 
-export type PromoStats = Promo & { bookings: number; sales: number; commission: number };
+export type PromoStats = Promo & { bookings: number; sales: number; commission: number; paid: number };
 
 /**
  * Every code with its results. Sales = price before taxes of the stays,
  * reduced by any refunds; commission is the code's % of that.
  */
 export async function listPromos(): Promise<PromoStats[]> {
-  const rows = await query<Row & { bookings: string; sales: string | null; commission: string | null }>(
+  const rows = await query<Row & { bookings: string; sales: string | null; commission: string | null; paid: string }>(
     `WITH b AS (
        SELECT promo_code,
               (quote->>'subtotal')::numeric
@@ -193,7 +193,8 @@ export async function listPromos(): Promise<PromoStats[]> {
        p.max_uses, p.active, p.created_at,
        count(b.promo_code) FILTER (WHERE b.status = 'confirmed') AS bookings,
        round(sum(b.kept)) AS sales,
-       round(sum(b.kept * b.commission_percent / 100)) AS commission
+       round(sum(b.kept * b.commission_percent / 100)) AS commission,
+       (SELECT coalesce(sum(amount_cents), 0) FROM promo_payouts x WHERE x.code = p.code) AS paid
      FROM promo_codes p LEFT JOIN b ON b.promo_code = p.code
      GROUP BY p.id ORDER BY p.created_at DESC`,
   );
@@ -202,5 +203,6 @@ export async function listPromos(): Promise<PromoStats[]> {
     bookings: Number(r.bookings),
     sales: Number(r.sales ?? 0),
     commission: Number(r.commission ?? 0),
+    paid: Number(r.paid ?? 0),
   }));
 }

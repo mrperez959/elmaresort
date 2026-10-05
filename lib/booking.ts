@@ -4,34 +4,38 @@ import { square, cardDeclineMessage } from "./square";
 import { env } from "./env";
 import { quoteStay, QuoteError } from "./quote";
 import { getSettings } from "./settings";
+import { AGREEMENT_VERSION } from "./legal";
 import { insertBooking, cancelBooking } from "./users";
 import { OVERLAP_ERROR } from "./db";
 import type { BookResult, PublicUser, Quote, StayRequest } from "./types";
 import { sendMail } from "./mail";
+import { sendBookingConfirmation } from "./emails";
 
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 
 /** Confirmation to the guest and a heads-up to the owner. Never blocks the booking. */
 async function notify(guest: PublicUser, code: string, q: Quote) {
-  const name = env.propertyName();
   const guests = q.adults + q.children;
-  const lines = [
-    `Dates: ${q.checkIn} to ${q.checkOut} (${q.nights} nights)`,
-    `Guests: ${guests}${q.infants ? ` + ${q.infants} infants` : ""}${q.pets ? `, ${q.pets} pets` : ""}`,
-    `Total paid: ${usd(q.total)} (taxes ${usd(q.tax)})`,
-    `Confirmation code: ${code}`,
-  ].join("\n");
   await Promise.allSettled([
-    sendMail(
-      guest.email,
-      `You're booked at ${name} (${code})`,
-      `Hi ${guest.firstName},\n\nYour stay is confirmed.\n\n${lines}\n\nYou can see your receipt, change or cancel your trip from your account on our website. The exact address and check-in instructions appear there on your check-in day.\n\n${name}`,
-    ),
+    sendBookingConfirmation(guest.email, guest.firstName, guest.lang, code, q),
     process.env.ADMIN_EMAIL
       ? sendMail(
           process.env.ADMIN_EMAIL,
           `New direct booking ${code}: ${q.checkIn} to ${q.checkOut}`,
-          `${guest.firstName} ${guest.lastName}\n${guest.email}\n${guest.phone}\n\n${lines}\n\nBlock these dates in Hospitable now if the calendar sync hasn't done it yet.`,
+          [
+            `${guest.firstName} ${guest.lastName}`,
+            guest.email,
+            guest.phone,
+            "",
+            `Dates: ${q.checkIn} to ${q.checkOut} (${q.nights} nights)`,
+            `Guests: ${guests}${q.infants ? ` + ${q.infants} infants` : ""}${q.pets ? `, ${q.pets} pets` : ""}`,
+            `Total paid: ${usd(q.total)} (taxes ${usd(q.tax)})`,
+            q.promoDiscount ? `Promo code: ${q.promoDiscount.code}` : "",
+            "",
+            "Block these dates in Hospitable now if the calendar sync hasn't done it yet.",
+          ]
+            .filter((x, i, a) => x !== "" || a[i - 1] !== "")
+            .join("\n"),
         )
       : Promise.resolve(),
   ]).then((results) =>
@@ -49,6 +53,8 @@ type BookInput = {
   idempotencyKey: string;
   /** total (cents) the guest saw when they clicked Pay */
   expectedTotal: number;
+  /** evidence that the house rules and rental agreement were accepted */
+  agreement: { ip: string; userAgent: string };
 };
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
@@ -84,7 +90,7 @@ const TAKEN: BookResult = {
  * Airbnb and Vrbo learn about the booking through the site's own calendar
  * feed (/calendar/<token>.ics), which they re-import every few hours.
  */
-export async function bookStay({ stay, guest, sourceId, idempotencyKey, expectedTotal }: BookInput): Promise<BookResult> {
+export async function bookStay({ stay, guest, sourceId, idempotencyKey, expectedTotal, agreement }: BookInput): Promise<BookResult> {
   // 1. Availability + price
   let quote;
   try {
@@ -128,7 +134,14 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
   let bookingId: string;
   try {
     const { cancellationPolicy } = await getSettings();
-    bookingId = await insertBooking({ userId: guest.id, code, squarePaymentId: paymentId, quote, policy: cancellationPolicy });
+    bookingId = await insertBooking({
+      userId: guest.id,
+      code,
+      squarePaymentId: paymentId,
+      quote,
+      policy: cancellationPolicy,
+      agreement: { version: AGREEMENT_VERSION, ...agreement },
+    });
   } catch (err) {
     await voidPayment(paymentId);
     if ((err as { code?: string }).code === OVERLAP_ERROR) return TAKEN;

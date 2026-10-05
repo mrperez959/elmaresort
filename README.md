@@ -80,6 +80,48 @@ Es un botón flotante en todas las páginas, excepto `/admin`. A los pocos segun
 
 Los números y el email se configuran en `/admin` → *Chat button*. Si están vacíos, el botón no aparece.
 
+## Idiomas
+
+La web está en inglés y español. Detecta el idioma del navegador, y arriba hay un botón "Español" / "English" para cambiarlo.
+
+- **Traducido:** textos, fechas, políticas, mensajes de error y emails. Cada huésped recibe los emails en el idioma con el que creó su cuenta.
+- **Lo que queda en inglés:** el panel `/admin` y lo que escribas tú en inglés sin versión en español (por ejemplo el mensaje de llegada, si dejas vacía la versión en español).
+
+## Reglas, contrato y páginas legales
+
+- **Páginas públicas:** `/house-rules` (reglas de la casa), `/rental-agreement` (contrato de alquiler), `/refunds` (cancelaciones y reembolsos) y `/privacy` (privacidad). Están en el pie de página junto con tu contacto.
+- **Reglas de la casa:** se editan en `/admin`, en inglés y español. Los horarios, el máximo de huéspedes y las mascotas se agregan solos.
+- **Aceptación antes de pagar:** el huésped marca una casilla aceptando las reglas, el contrato y la política de cancelación. La reserva guarda la versión del contrato, la fecha y hora, la IP y el navegador, como prueba ante un contracargo.
+- **Revisión legal:** el texto del contrato está en `lib/legal.ts`. **Hazlo revisar por un abogado de Florida.**
+
+## Emails automáticos
+
+Una tarea diaria (`vercel.json`, a las 9 AM de Tampa aproximadamente) envía:
+
+- **El día de llegada:** tu mensaje de check-in, con `{first_name}` y `{address}` reemplazados, más un enlace de direcciones. Se escribe en `/admin`.
+- **El día después de la salida:** un agradecimiento con el enlace para dejar reseña, si lo configuras.
+- **"Tus fechas siguen libres":** a quien llegó al checkout con su cuenta y no pagó en 3 horas. Solo se envía una vez por estadía y solo si las fechas siguen disponibles.
+
+Requiere la variable `CRON_SECRET`.
+
+## Apple Pay y Google Pay
+
+Aparecen arriba del formulario de tarjeta cuando el dispositivo los permite.
+
+- **Google Pay:** funciona sin configurar nada.
+- **Apple Pay:**
+  1. En el Developer Console de Square → **Apple Pay**, agrega tu dominio.
+  2. Descarga el archivo de verificación.
+  3. Pega su contenido en la variable `APPLE_PAY_DOMAIN_ASSOCIATION`.
+  4. Haz Redeploy y vuelve a Square para verificar el dominio.
+
+## Fechas bloqueadas, reportes y alertas
+
+- **Fechas bloqueadas** (`/admin` → *Blocked dates*): para familia, mantenimiento o reservas por teléfono. Se cierran en la web al instante y salen en el calendario hacia Hospitable.
+- **Reportes** (`/admin/reports`): impuestos cobrados por mes, ya descontando reembolsos, y descargas en CSV del reporte de impuestos y de todas las reservas.
+- **Comisiones:** en `/admin/promos` puedes registrar cada pago a un influencer y ver el saldo pendiente.
+- **Alertas de errores:** si algo falla en producción (pagos, cambios de viaje, calendarios, emails), te llega un email a `ADMIN_EMAIL`, como máximo uno cada 30 minutos por tipo de error.
+
 ## Códigos de influencers (`/admin/promos`)
 
 Cada código tiene:

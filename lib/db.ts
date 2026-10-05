@@ -133,6 +133,44 @@ CREATE TABLE IF NOT EXISTS promo_codes (
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promo_code text;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS commission_percent numeric(5,2);
 
+-- Proof that the guest accepted the house rules and rental agreement.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS agreement_version text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS agreed_at timestamptz;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS agreed_ip text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS agreed_user_agent text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lang text NOT NULL DEFAULT 'en';
+
+-- Automatic emails.
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS checkin_emailed_at timestamptz;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS review_emailed_at timestamptz;
+CREATE TABLE IF NOT EXISTS checkout_intents (
+  user_id     uuid PRIMARY KEY REFERENCES users(id),
+  stay        jsonb NOT NULL,
+  total_cents int NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  emailed_at  timestamptz
+);
+
+-- Dates the owner blocks by hand (family, maintenance, phone bookings).
+CREATE TABLE IF NOT EXISTS owner_blocks (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  start_date  date NOT NULL,
+  end_date    date NOT NULL,
+  note        text NOT NULL DEFAULT '',
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CHECK (end_date > start_date)
+);
+
+-- Commission payments to influencers.
+CREATE TABLE IF NOT EXISTS promo_payouts (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code          text NOT NULL REFERENCES promo_codes(code),
+  amount_cents  int NOT NULL CHECK (amount_cents > 0),
+  paid_on       date NOT NULL,
+  note          text NOT NULL DEFAULT '',
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
 -- First-party analytics. No IP addresses are stored.
 CREATE TABLE IF NOT EXISTS visits (
   id            uuid PRIMARY KEY,

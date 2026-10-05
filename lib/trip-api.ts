@@ -3,6 +3,7 @@ import { currentUser, isJsonRequest } from "./auth";
 import { getTrip, TripError, type Trip } from "./trips";
 import { QuoteError } from "./quote";
 import { allow } from "./ratelimit";
+import { alertOwner } from "./alerts";
 
 /** Shared plumbing for /api/trips/[code]/*: auth, ownership and error mapping. */
 export async function withGuestTrip(
@@ -28,6 +29,7 @@ export async function withGuestTrip(
       return Response.json({ error: err.message }, { status: 409 });
     }
     console.error(`[trips] ${code}`, err);
+    await alertOwner("trip change or cancellation", err, code);
     return Response.json({ error: "Something went wrong. Nothing was charged. Try again or contact us." }, { status: 502 });
   }
 }

@@ -1,33 +1,51 @@
+"use client";
+
 import type { Quote } from "@/lib/types";
 import { money } from "@/lib/format";
+import { nightsWord, petsWord, type Lang, makeL } from "@/lib/i18n";
+import { useL } from "./LangProvider";
 
 type Row = { label: string; amount: number; kind?: "discount" | "tax" };
 
-function nightRows(q: Quote): Row[] {
+function nightRows(q: Quote, lang: Lang): Row[] {
+  const l = makeL(lang);
   const rows: Row[] = [];
   if (q.weekdayNights) {
     rows.push({
-      label: `${money(q.weekdayRate)} × ${q.weekdayNights} ${q.weekdayNights === 1 ? "night" : "nights"}`,
+      label: `${money(q.weekdayRate)} × ${q.weekdayNights} ${nightsWord(lang, q.weekdayNights)}`,
       amount: q.weekdayNights * q.weekdayRate,
     });
   }
   if (q.weekendNights) {
     rows.push({
-      label: `${money(q.weekendRate)} × ${q.weekendNights} weekend ${q.weekendNights === 1 ? "night" : "nights"}`,
+      label: l(
+        `${money(q.weekendRate)} × ${q.weekendNights} weekend ${nightsWord(lang, q.weekendNights)}`,
+        `${money(q.weekendRate)} × ${q.weekendNights} ${nightsWord(lang, q.weekendNights)} de fin de semana`,
+      ),
       amount: q.weekendNights * q.weekendRate,
     });
   }
   if (q.lengthDiscount) {
-    rows.push({ label: `${q.lengthDiscount.label} (${q.lengthDiscount.percent}%)`, amount: -q.lengthDiscount.amount, kind: "discount" });
+    const label =
+      lang === "es" ? (q.lengthDiscount.label.startsWith("Monthly") ? "Descuento mensual" : "Descuento semanal") : q.lengthDiscount.label;
+    rows.push({ label: `${label} (${q.lengthDiscount.percent}%)`, amount: -q.lengthDiscount.amount, kind: "discount" });
   }
   if (q.directDiscount) {
-    rows.push({ label: `Direct booking discount (${q.directDiscount.percent}%)`, amount: -q.directDiscount.amount, kind: "discount" });
+    rows.push({
+      label: l(`Direct booking discount (${q.directDiscount.percent}%)`, `Descuento por reserva directa (${q.directDiscount.percent}%)`),
+      amount: -q.directDiscount.amount,
+      kind: "discount",
+    });
   }
   if (q.promoDiscount && q.promoDiscount.amount > 0) {
-    rows.push({ label: `Promo code ${q.promoDiscount.code} (${q.promoDiscount.percent}%)`, amount: -q.promoDiscount.amount, kind: "discount" });
+    rows.push({
+      label: l(`Promo code ${q.promoDiscount.code} (${q.promoDiscount.percent}%)`, `Código ${q.promoDiscount.code} (${q.promoDiscount.percent}%)`),
+      amount: -q.promoDiscount.amount,
+      kind: "discount",
+    });
   }
-  if (q.cleaningFee) rows.push({ label: "Cleaning fee", amount: q.cleaningFee });
-  if (q.petFee) rows.push({ label: `Pet fee (${q.pets} ${q.pets === 1 ? "pet" : "pets"})`, amount: q.petFee });
+  if (q.cleaningFee) rows.push({ label: l("Cleaning fee", "Tarifa de limpieza"), amount: q.cleaningFee });
+  if (q.petFee) rows.push({ label: l(`Pet fee (${q.pets} ${petsWord(lang, q.pets)})`, `Tarifa de mascota (${q.pets} ${petsWord(lang, q.pets)})`), amount: q.petFee });
   return rows;
 }
 
@@ -49,23 +67,27 @@ function Lines({ rows }: { rows: Row[] }) {
  * taxes, with that total as the most prominent number (FTC fee rule).
  */
 export function PriceBeforeTaxes({ quote }: { quote: Quote }) {
+  const { lang, l } = useL();
   return (
     <div className="price-preview">
       <div className="price-total">
         <span className="price-total-amount">{money(quote.subtotal)}</span>
         <span className="price-total-label">
-          total for {quote.nights} {quote.nights === 1 ? "night" : "nights"}, before taxes
+          {l(
+            `total for ${quote.nights} ${nightsWord(lang, quote.nights)}, before taxes`,
+            `total por ${quote.nights} ${nightsWord(lang, quote.nights)}, antes de impuestos`,
+          )}
         </span>
       </div>
       <table className="breakdown compact">
         <tbody>
-          <Lines rows={nightRows(quote)} />
+          <Lines rows={nightRows(quote, lang)} />
         </tbody>
       </table>
       <p className="fine">
         {quote.taxes.length
-          ? "Taxes are added on the next step, before you pay."
-          : "No taxes are added to this stay."}
+          ? l("Taxes are added on the next step, before you pay.", "Los impuestos se agregan en el siguiente paso, antes de pagar.")
+          : l("No taxes are added to this stay.", "Esta estadía no lleva impuestos.")}
       </p>
     </div>
   );
@@ -73,24 +95,25 @@ export function PriceBeforeTaxes({ quote }: { quote: Quote }) {
 
 /** Step 2, at checkout: the full invoice. Taxes show as one line, like Airbnb. */
 export function FullInvoice({ quote }: { quote: Quote }) {
+  const { lang, l } = useL();
   return (
     <table className="breakdown invoice">
       <tbody>
-        <Lines rows={nightRows(quote)} />
+        <Lines rows={nightRows(quote, lang)} />
         <tr className="subtotal">
-          <th scope="row">Total before taxes</th>
+          <th scope="row">{l("Total before taxes", "Total antes de impuestos")}</th>
           <td>{money(quote.subtotal)}</td>
         </tr>
         {quote.tax > 0 && (
           <tr className="tax">
-            <th scope="row">Taxes</th>
+            <th scope="row">{l("Taxes", "Impuestos")}</th>
             <td>{money(quote.tax)}</td>
           </tr>
         )}
       </tbody>
       <tfoot>
         <tr>
-          <th scope="row">Total due (USD)</th>
+          <th scope="row">{l("Total due (USD)", "Total a pagar (USD)")}</th>
           <td>{money(quote.total)}</td>
         </tr>
       </tfoot>

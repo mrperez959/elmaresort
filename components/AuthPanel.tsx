@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/track";
+import { useL } from "./LangProvider";
 
 type Mode = "signup" | "login" | "forgot" | "reset";
 
@@ -19,9 +20,10 @@ async function post(path: string, body: object) {
 
 /** 6-digit code box used by email verification, password reset and admin sign-in. */
 export function CodeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { l } = useL();
   return (
     <label>
-      6-digit code
+      {l("6-digit code", "Código de 6 dígitos")}
       <input
         className="code-input"
         inputMode="numeric"
@@ -38,6 +40,7 @@ export function CodeInput({ value, onChange }: { value: string; onChange: (v: st
 /** Shown to a signed-in guest whose email isn't confirmed yet. */
 export function VerifyEmail({ email }: { email: string }) {
   const router = useRouter();
+  const { l, msg } = useL();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function VerifyEmail({ email }: { email: string }) {
       await post("/api/auth/verify", { code });
       router.refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
       setBusy(false);
     }
   }
@@ -61,17 +64,18 @@ export function VerifyEmail({ email }: { email: string }) {
     setInfo(null);
     try {
       await post("/api/auth/resend", {});
-      setInfo("We sent a new code.");
+      setInfo(l("We sent a new code.", "Te enviamos un código nuevo."));
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
     }
   }
 
   return (
     <form className="guest-form auth" onSubmit={submit}>
       <p className="auth-intro">
-        <strong>Confirm your email.</strong> We sent a 6-digit code to <strong>{email}</strong>. It can take a minute;
-        check your spam folder too.
+        <strong>{l("Confirm your email.", "Confirma tu email.")}</strong>{" "}
+        {l("We sent a 6-digit code to", "Te enviamos un código de 6 dígitos a")} <strong>{email}</strong>.{" "}
+        {l("It can take a minute; check your spam folder too.", "Puede tardar un minuto; revisa también la carpeta de spam.")}
       </p>
       <CodeInput value={code} onChange={setCode} />
       {error && (
@@ -81,10 +85,10 @@ export function VerifyEmail({ email }: { email: string }) {
       )}
       {info && <p className="notice">{info}</p>}
       <button className="pay" type="submit" disabled={busy || code.length !== 6}>
-        {busy ? "Checking…" : "Confirm email"}
+        {busy ? l("Checking…", "Verificando…") : l("Confirm email", "Confirmar email")}
       </button>
       <button type="button" className="link" onClick={resend}>
-        Send a new code
+        {l("Send a new code", "Enviar un código nuevo")}
       </button>
     </form>
   );
@@ -92,6 +96,7 @@ export function VerifyEmail({ email }: { email: string }) {
 
 export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; initialMode?: "signup" | "login" }) {
   const router = useRouter();
+  const { lang, l, msg } = useL();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", website: "" });
   const [code, setCode] = useState("");
@@ -114,13 +119,13 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
     setError(null);
     try {
       if (mode === "signup") {
-        await post("/api/auth/signup", form);
+        await post("/api/auth/signup", { ...form, lang });
         track("signup");
       }
       else if (mode === "login") await post("/api/auth/login", { email: form.email, password: form.password });
       else if (mode === "forgot") {
         await post("/api/auth/reset/request", { email: form.email });
-        setInfo("If there's an account with that email, we sent it a 6-digit code.");
+        setInfo(l("If there's an account with that email, we sent it a 6-digit code.", "Si hay una cuenta con ese email, le enviamos un código de 6 dígitos."));
         setMode("reset");
         setBusy(false);
         return;
@@ -130,7 +135,7 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
       // The server decides what comes next (e.g. the email code step).
       router.refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
       setBusy(false);
     }
   }
@@ -143,31 +148,37 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
       {tabs && (
         <div className="auth-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => go("signup")}>
-            Create account
+            {l("Create account", "Crear cuenta")}
           </button>
           <button type="button" role="tab" aria-selected={mode === "login"} onClick={() => go("login")}>
-            Sign in
+            {l("Sign in", "Iniciar sesión")}
           </button>
         </div>
       )}
-      {mode === "forgot" && <p className="auth-intro">Enter your email and we&apos;ll send you a code to choose a new password.</p>}
-      {mode === "reset" && <p className="auth-intro">Enter the code from your email and your new password.</p>}
+      {mode === "forgot" && (
+        <p className="auth-intro">
+          {l("Enter your email and we'll send you a code to choose a new password.", "Escribe tu email y te enviaremos un código para elegir una contraseña nueva.")}
+        </p>
+      )}
+      {mode === "reset" && (
+        <p className="auth-intro">{l("Enter the code from your email and your new password.", "Escribe el código del email y tu nueva contraseña.")}</p>
+      )}
 
       <form className="guest-form" onSubmit={submit}>
         {mode === "signup" && (
           <>
             <div className="row">
               <label>
-                First name
+                {l("First name", "Nombre")}
                 <input required autoComplete="given-name" value={form.firstName} onChange={set("firstName")} />
               </label>
               <label>
-                Last name
+                {l("Last name", "Apellido")}
                 <input required autoComplete="family-name" value={form.lastName} onChange={set("lastName")} />
               </label>
             </div>
             <label>
-              Mobile phone
+              {l("Mobile phone", "Celular")}
               <input required type="tel" autoComplete="tel" placeholder="(813) 555-0100" value={form.phone} onChange={set("phone")} />
             </label>
             {/* Honeypot for bots: hidden from people and screen readers. */}
@@ -188,7 +199,7 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
         {mode === "reset" && <CodeInput value={code} onChange={setCode} />}
         {mode !== "forgot" && (
           <label>
-            {mode === "reset" ? "New password" : "Password"}
+            {mode === "reset" ? l("New password", "Contraseña nueva") : l("Password", "Contraseña")}
             <input
               required
               type="password"
@@ -197,7 +208,7 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
               value={form.password}
               onChange={set("password")}
             />
-            {mode !== "login" && <span className="field-hint">At least 10 characters.</span>}
+            {mode !== "login" && <span className="field-hint">{l("At least 10 characters.", "Al menos 10 caracteres.")}</span>}
           </label>
         )}
         {error && (
@@ -208,21 +219,31 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
         {info && <p className="notice">{info}</p>}
         <button className="pay" type="submit" disabled={busy}>
           {busy
-            ? "One moment…"
-            : { signup: "Create account", login: "Sign in", forgot: "Send code", reset: "Save new password" }[mode]}
+            ? l("One moment…", "Un momento…")
+            : {
+                signup: l("Create account", "Crear cuenta"),
+                login: l("Sign in", "Iniciar sesión"),
+                forgot: l("Send code", "Enviar código"),
+                reset: l("Save new password", "Guardar contraseña nueva"),
+              }[mode]}
         </button>
         {mode === "login" && (
           <button type="button" className="link" onClick={() => go("forgot")}>
-            Forgot your password?
+            {l("Forgot your password?", "¿Olvidaste tu contraseña?")}
           </button>
         )}
         {(mode === "forgot" || mode === "reset") && (
           <button type="button" className="link" onClick={() => go("login")}>
-            Back to sign in
+            {l("Back to sign in", "Volver a iniciar sesión")}
           </button>
         )}
         {mode === "signup" && (
-          <p className="fine">We&apos;ll email you a code to confirm your address. Your phone is only used about your stay.</p>
+          <p className="fine">
+            {l(
+              "We'll email you a code to confirm your address. Your phone is only used about your stay.",
+              "Te enviaremos un código por email para confirmar tu dirección. Tu teléfono solo se usa para temas de tu estadía.",
+            )}
+          </p>
         )}
       </form>
     </div>
@@ -231,6 +252,7 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
 
 export function SignOutButton({ admin = false }: { admin?: boolean }) {
   const router = useRouter();
+  const { l } = useL();
   return (
     <button
       type="button"
@@ -244,7 +266,7 @@ export function SignOutButton({ admin = false }: { admin?: boolean }) {
         router.refresh();
       }}
     >
-      Sign out
+      {admin ? "Sign out" : l("Sign out", "Cerrar sesión")}
     </button>
   );
 }

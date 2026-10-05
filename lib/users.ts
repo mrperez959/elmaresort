@@ -11,6 +11,7 @@ type UserRow = {
   phone: string;
   email_verified_at: Date | null;
   session_version: number;
+  lang: string;
 };
 
 function toPublic(r: UserRow): PublicUser {
@@ -21,6 +22,7 @@ function toPublic(r: UserRow): PublicUser {
     lastName: r.last_name,
     phone: r.phone,
     emailVerified: r.email_verified_at !== null,
+    lang: r.lang === "es" ? "es" : "en",
   };
 }
 
@@ -70,13 +72,14 @@ export async function createUser(input: {
   firstName: string;
   lastName: string;
   phone: string;
+  lang?: "en" | "es";
 }): Promise<PublicUser | null> {
   const rows = await query<UserRow>(
-    `INSERT INTO users (email, password_hash, first_name, last_name, phone)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (email, password_hash, first_name, last_name, phone, lang)
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (email) DO NOTHING
      RETURNING *`,
-    [normalizeEmail(input.email), input.passwordHash, input.firstName, input.lastName, input.phone],
+    [normalizeEmail(input.email), input.passwordHash, input.firstName, input.lastName, input.phone, input.lang ?? "en"],
   );
   return rows[0] ? { ...toPublic(rows[0]) } : null; // null = email already registered
 }
@@ -88,13 +91,15 @@ export async function insertBooking(b: {
   squarePaymentId: string;
   quote: Quote;
   policy: string;
+  agreement: { version: string; ip: string; userAgent: string };
 }) {
   const q = b.quote;
   const rows = await query<{ id: string }>(
     `WITH b AS (
        INSERT INTO bookings (user_id, code, square_payment_id, check_in, check_out,
-         adults, children, infants, pets, total_cents, quote, policy, promo_code, commission_percent)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         adults, children, infants, pets, total_cents, quote, policy, promo_code, commission_percent,
+         agreement_version, agreed_at, agreed_ip, agreed_user_agent)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,now(),$16,$17)
        RETURNING id
      ), p AS (
        INSERT INTO payments (booking_id, square_payment_id, amount_cents, kind)
@@ -103,7 +108,8 @@ export async function insertBooking(b: {
      SELECT id FROM b`,
     [b.userId, b.code, b.squarePaymentId, q.checkIn, q.checkOut,
      q.adults, q.children, q.infants, q.pets, q.total, JSON.stringify(q), b.policy,
-     q.promoDiscount?.code ?? null, q.promoDiscount?.commissionPercent ?? null],
+     q.promoDiscount?.code ?? null, q.promoDiscount?.commissionPercent ?? null,
+     b.agreement.version, b.agreement.ip, b.agreement.userAgent],
   );
   return rows[0].id;
 }

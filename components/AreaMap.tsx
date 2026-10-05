@@ -1,29 +1,33 @@
 import { House, MapPin } from "lucide-react";
+import { makeL, type Lang } from "@/lib/i18n";
 
 /**
  * Public map of the general area only. The center is an approximate point the
  * owner picks near the house (never the address), with a circle on top.
  */
-export function AreaMap({ area, center, zoom }: { area: string; center: string; zoom: number }) {
+export function AreaMap({ area, center, zoom, lang }: { area: string; center: string; zoom: number; lang: Lang }) {
+  const l = makeL(lang);
   const q = center ? center.replace(/\s+/g, "") : area;
-  const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&output=embed`;
+  const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&hl=${lang}&output=embed`;
   return (
     <section className="area-map" aria-labelledby="map-heading">
       <div className="area-text">
-        <h2 id="map-heading">Where you&apos;ll be</h2>
+        <h2 id="map-heading">{l("Where you'll be", "Dónde vas a estar")}</h2>
         <p className="area-name">
           <MapPin size={18} strokeWidth={1.75} aria-hidden="true" /> {area}
         </p>
         <p>
-          A waterfront home on a canal. The exact address and check-in details appear in your trip on the day you
-          arrive.
+          {l(
+            "A waterfront home on a canal. The exact address and check-in details appear in your trip on the day you arrive.",
+            "Una casa frente a un canal. La dirección exacta y los detalles de llegada aparecen en tu viaje el día que llegas.",
+          )}
         </p>
       </div>
       <div className="map-frame">
         <iframe
           className={center ? "map-static" : undefined}
           tabIndex={center ? -1 : undefined}
-          title={`Map of ${area}`}
+          title={l(`Map of ${area}`, `Mapa de ${area}`)}
           src={src}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
@@ -38,7 +42,7 @@ export function AreaMap({ area, center, zoom }: { area: string; center: string; 
                 <House size={22} strokeWidth={2.2} />
               </span>
             </span>
-            <span className="map-caption">Approximate location</span>
+            <span className="map-caption">{l("Approximate location", "Ubicación aproximada")}</span>
           </>
         )}
       </div>
@@ -49,7 +53,7 @@ export function AreaMap({ area, center, zoom }: { area: string; center: string; 
           target="_blank"
           rel="noopener noreferrer"
         >
-          Explore the area in Google Maps
+          {l("Explore the area in Google Maps", "Explora la zona en Google Maps")}
         </a>
       )}
     </section>

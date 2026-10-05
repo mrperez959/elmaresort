@@ -16,20 +16,34 @@ function hash(code: string, email: string, purpose: string): string {
 
 export class CodeError extends Error {}
 
-const SUBJECTS: Record<CodePurpose, string> = {
-  verify: "Your Elma Resort verification code",
-  reset: "Your Elma Resort password reset code",
-  admin: "Your Elma Resort admin sign-in code",
+const SUBJECTS: Record<"en" | "es", Record<CodePurpose, string>> = {
+  en: {
+    verify: "Your Elma Resort verification code",
+    reset: "Your Elma Resort password reset code",
+    admin: "Your Elma Resort admin sign-in code",
+  },
+  es: {
+    verify: "Tu código de verificación de Elma Resort",
+    reset: "Tu código para cambiar la contraseña de Elma Resort",
+    admin: "Tu código de acceso al panel de Elma Resort",
+  },
 };
 
-const INTROS: Record<CodePurpose, string> = {
-  verify: "Use this code to confirm your email:",
-  reset: "Use this code to choose a new password:",
-  admin: "Use this code to finish signing in to the admin panel:",
+const INTROS: Record<"en" | "es", Record<CodePurpose, string>> = {
+  en: {
+    verify: "Use this code to confirm your email:",
+    reset: "Use this code to choose a new password:",
+    admin: "Use this code to finish signing in to the admin panel:",
+  },
+  es: {
+    verify: "Usa este código para confirmar tu email:",
+    reset: "Usa este código para elegir una contraseña nueva:",
+    admin: "Usa este código para terminar de entrar al panel:",
+  },
 };
 
 /** Create and email a 6-digit code. Rate-limited per email and per IP. */
-export async function sendCode(email: string, purpose: CodePurpose, ip: string): Promise<void> {
+export async function sendCode(email: string, purpose: CodePurpose, ip: string, lang: "en" | "es" = "en"): Promise<void> {
   const e = email.toLowerCase();
   if (!(await allow(`code-gap:${purpose}:${e}`, 1, 45))) {
     throw new CodeError("Please wait a minute before asking for another code.");
@@ -47,8 +61,10 @@ export async function sendCode(email: string, purpose: CodePurpose, ip: string):
   );
   await sendMail(
     email,
-    SUBJECTS[purpose],
-    `${INTROS[purpose]}\n\n    ${code}\n\nIt expires in ${TTL_MINUTES} minutes. If you didn't ask for it, ignore this email.\n\nElma Resort`,
+    SUBJECTS[lang][purpose],
+    lang === "es"
+      ? `${INTROS.es[purpose]}\n\n    ${code}\n\nVence en ${TTL_MINUTES} minutos. Si no lo pediste, ignora este email.\n\nElma Resort`
+      : `${INTROS.en[purpose]}\n\n    ${code}\n\nIt expires in ${TTL_MINUTES} minutes. If you didn't ask for it, ignore this email.\n\nElma Resort`,
   );
 }
 

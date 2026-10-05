@@ -1,30 +1,46 @@
 // Cancellation policies, modeled on Airbnb's standard ones. Pure functions:
 // used by the server to compute refunds and by the browser to show deadlines.
 import type { Quote } from "./types";
+import { locale, type Lang } from "./i18n";
 
 export type PolicyId = "flexible" | "moderate" | "limited" | "firm";
 
-export const POLICIES: Record<PolicyId, { name: string; summary: string }> = {
+export const POLICIES: Record<PolicyId, { name: string; nameEs: string; summary: string; summaryEs: string }> = {
   flexible: {
     name: "Flexible",
+    nameEs: "Flexible",
     summary: "Full refund up to 24 hours before check-in. After that, the first night isn't refunded.",
+    summaryEs: "Reembolso completo hasta 24 horas antes de la llegada. Después, no se devuelve la primera noche.",
   },
   moderate: {
     name: "Moderate",
+    nameEs: "Moderada",
     summary:
       "Full refund up to 5 days before check-in. After that, the first night isn't refunded and the other nights are refunded 50%.",
+    summaryEs:
+      "Reembolso completo hasta 5 días antes de la llegada. Después, no se devuelve la primera noche y del resto se devuelve el 50%.",
   },
   limited: {
     name: "Limited",
+    nameEs: "Limitada",
     summary:
       "Full refund up to 14 days before check-in. Between 14 and 7 days before, 50% of the nights are refunded. Less than 7 days before, nights aren't refunded.",
+    summaryEs:
+      "Reembolso completo hasta 14 días antes de la llegada. Entre 14 y 7 días antes, se devuelve el 50% de las noches. Con menos de 7 días, no se devuelven las noches.",
   },
   firm: {
     name: "Firm",
+    nameEs: "Firme",
     summary:
       "Full refund up to 30 days before check-in. Between 30 and 7 days before, 50% of the nights are refunded. Less than 7 days before, nights aren't refunded.",
+    summaryEs:
+      "Reembolso completo hasta 30 días antes de la llegada. Entre 30 y 7 días antes, se devuelve el 50% de las noches. Con menos de 7 días, no se devuelven las noches.",
   },
 };
+
+export const policyName = (id: PolicyId, lang: Lang) => (lang === "es" ? POLICIES[id].nameEs : POLICIES[id].name);
+export const policySummary = (id: PolicyId, lang: Lang) =>
+  lang === "es" ? POLICIES[id].summaryEs : POLICIES[id].summary;
 
 export const POLICY_IDS = Object.keys(POLICIES) as PolicyId[];
 
@@ -34,6 +50,16 @@ export const GRACE_NOTE =
   "Any booking made at least 7 days before check-in can be cancelled for a full refund within 24 hours of booking.";
 
 export const FEES_NOTE = "Cleaning and pet fees are always refunded if you cancel before check-in, with their taxes.";
+
+export const graceNote = (lang: Lang) =>
+  lang === "es"
+    ? "Toda reserva hecha con al menos 7 días de anticipación se puede cancelar con reembolso completo dentro de las 24 horas siguientes a reservar."
+    : GRACE_NOTE;
+
+export const feesNote = (lang: Lang) =>
+  lang === "es"
+    ? "Las tarifas de limpieza y de mascota siempre se devuelven, con sus impuestos, si cancelas antes de la llegada."
+    : FEES_NOTE;
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -121,17 +147,42 @@ export function cancellationRefund(
 }
 
 /** Plain-language deadlines for a stay, for the checkout page and the trip page. */
-export function policyDeadlines(policy: PolicyId, checkIn: Date, timeZone = "America/New_York"): string[] {
+export function policyDeadlines(
+  policy: PolicyId,
+  checkIn: Date,
+  timeZone = "America/New_York",
+  lang: Lang = "en",
+): string[] {
   const fmt = (d: Date) =>
-    new Intl.DateTimeFormat("en-US", {
+    new Intl.DateTimeFormat(locale(lang), {
       weekday: "short",
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
       timeZone,
-    }).format(d);
+    })
+      .format(d)
+      .replace(/\.$/, ""); // "p.m." already ends with a period
   const before = (days: number) => new Date(checkIn.getTime() - days * DAY);
+  if (lang === "es") {
+    switch (policy) {
+      case "flexible":
+        return [`Reembolso completo si cancelas antes del ${fmt(before(1))}.`, "Después, no se devuelve la primera noche."];
+      case "moderate":
+        return [
+          `Reembolso completo si cancelas antes del ${fmt(before(5))}.`,
+          "Después, no se devuelve la primera noche y del resto se devuelve el 50%.",
+        ];
+      case "limited":
+      case "firm":
+        return [
+          `Reembolso completo si cancelas antes del ${fmt(before(policy === "firm" ? 30 : 14))}.`,
+          `Se devuelve el 50% de las noches si cancelas antes del ${fmt(before(7))}.`,
+          "Después, no se devuelven las noches.",
+        ];
+    }
+  }
   switch (policy) {
     case "flexible":
       return [`Full refund if you cancel before ${fmt(before(1))}.`, "After that, the first night isn't refunded."];

@@ -5,17 +5,21 @@ import Link from "next/link";
 import { SquareCard, type SquareCardHandle } from "./SquareCard";
 import { AuthPanel, VerifyEmail } from "./AuthPanel";
 import { FullInvoice } from "./Invoice";
+import { useL } from "./LangProvider";
 import type { BookResult, PublicUser, Quote, StayRequest } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
+import { guestsWord, infantsWord, petsWord } from "@/lib/i18n";
 import { track } from "@/lib/track";
-import { POLICIES, policyDeadlines, zonedInstant, GRACE_NOTE, FEES_NOTE, type PolicyId } from "@/lib/policy";
+import { policyName, policyDeadlines, zonedInstant, graceNote, feesNote, type PolicyId } from "@/lib/policy";
 
 type Props = { stay: StayRequest; user: PublicUser | null; policy: PolicyId; checkInHour: number };
 
 export function Checkout({ stay, user, policy, checkInHour }: Props) {
+  const { lang, l, msg } = useL();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [booked, setBooked] = useState<Extract<BookResult, { state: "confirmed" }> | null>(null);
@@ -46,24 +50,26 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
         if (!r.ok) setQuoteError(body.error ?? "The price couldn't be calculated.");
         else {
           setQuote(body.quote);
-          setPromoError(body.promoError ? `Promo code not applied: ${body.promoError}` : null);
+          setPromoError(body.promoError ?? null);
+          // Remember the stay, for a "your dates are still open" email if the guest doesn't finish.
+          fetch("/api/checkout-intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...stay, promo: body.quote.promoDiscount?.code, total: body.quote.total }),
+          }).catch(() => undefined);
         }
       })
       .catch(() => setQuoteError("The price couldn't be calculated. Try again."));
   }, [stay]);
 
-  async function pay(e: React.FormEvent) {
-    e.preventDefault();
-    if (!quote || !cardRef.current || !user) return;
+  const mustAgree = () =>
+    agreed ? null : l("Please accept the house rules and the rental agreement first.", "Primero acepta las reglas de la casa y el contrato de alquiler.");
+
+  async function book(sourceId: string) {
+    if (!quote) return;
     setPaying(true);
     setPayError(null);
     try {
-      const sourceId = await cardRef.current.tokenize(quote.total, {
-        givenName: user.firstName,
-        familyName: user.lastName,
-        email: user.email,
-        phone: user.phone || undefined,
-      });
       const r = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,6 +77,7 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
           ...stay,
           // Only send the code if it was accepted for this price.
           promo: quote.promoDiscount?.code,
+          agreed: true,
           sourceId,
           idempotencyKey: crypto.randomUUID(),
           expectedTotal: quote.total,
@@ -84,10 +91,31 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
         return;
       }
       if (result.state === "price_changed") setQuote(result.quote);
-      setPayError(result.message);
+      setPayError(msg(result.message));
     } catch (err) {
-      setPayError((err as Error).message || "Payment couldn't be completed. Try again.");
+      setPayError(msg((err as Error).message || "Payment couldn't be completed. Try again."));
     } finally {
+      setPaying(false);
+    }
+  }
+
+  async function payWithCard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!quote || !cardRef.current || !user) return;
+    const stop = mustAgree();
+    if (stop) return setPayError(stop);
+    setPaying(true);
+    setPayError(null);
+    try {
+      const sourceId = await cardRef.current.tokenize(quote.total, {
+        givenName: user.firstName,
+        familyName: user.lastName,
+        email: user.email,
+        phone: user.phone || undefined,
+      });
+      await book(sourceId);
+    } catch (err) {
+      setPayError(msg((err as Error).message || "Payment couldn't be completed. Try again."));
       setPaying(false);
     }
   }
@@ -96,20 +124,24 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
     const q = booked.quote;
     return (
       <section className="status ok checkout-done" aria-live="polite">
-        <h2>You&apos;re booked, {booked.firstName}.</h2>
+        <h2>{l(`You're booked, ${booked.firstName}.`, `¡Reservado, ${booked.firstName}!`)}</h2>
         <p className="big-dates">
-          {longDate(q.checkIn)} to {longDate(q.checkOut)}
+          {longDate(q.checkIn, lang)} {l("to", "al")} {longDate(q.checkOut, lang)}
         </p>
         <p>
-          Confirmation code <strong>{booked.code}</strong>
+          {l("Confirmation code", "Código de confirmación")} <strong>{booked.code}</strong>
         </p>
         <div className="receipt">
-          <h3>Receipt</h3>
+          <h3>{l("Receipt", "Recibo")}</h3>
           <FullInvoice quote={q} />
         </div>
         <p>
-          Your trip and this receipt are saved in <Link href="/account">your account</Link>, where you can change or
-          cancel it. Check-in details will be sent to {user?.email} before your arrival.
+          {l("Your trip and this receipt are saved in", "Tu viaje y este recibo quedan guardados en")}{" "}
+          <Link href="/account">{l("your account", "tu cuenta")}</Link>
+          {l(
+            ", where you can change or cancel it. We'll email you the check-in details on your arrival day.",
+            ", donde puedes cambiarlo o cancelarlo. Te enviaremos los detalles de llegada por email el día que llegues.",
+          )}
         </p>
       </section>
     );
@@ -120,80 +152,116 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
   return (
     <div className="checkout">
       <section className="checkout-trip" aria-labelledby="trip-heading">
-        <h2 id="trip-heading">Your trip</h2>
+        <h2 id="trip-heading">{l("Your trip", "Tu viaje")}</h2>
         <dl className="trip-facts">
           <div>
-            <dt>Dates</dt>
+            <dt>{l("Dates", "Fechas")}</dt>
             <dd>
-              {longDate(stay.checkIn)} to {longDate(stay.checkOut)}
+              {longDate(stay.checkIn, lang)} {l("to", "al")} {longDate(stay.checkOut, lang)}
             </dd>
           </div>
           <div>
-            <dt>Guests</dt>
+            <dt>{l("Guests", "Huéspedes")}</dt>
             <dd>
-              {guests} {guests === 1 ? "guest" : "guests"}
-              {stay.infants ? `, ${stay.infants} ${stay.infants === 1 ? "infant" : "infants"}` : ""}
-              {stay.pets ? `, ${stay.pets} ${stay.pets === 1 ? "pet" : "pets"}` : ""}
+              {guests} {guestsWord(lang, guests)}
+              {stay.infants ? `, ${stay.infants} ${infantsWord(lang, stay.infants)}` : ""}
+              {stay.pets ? `, ${stay.pets} ${petsWord(lang, stay.pets)}` : ""}
             </dd>
           </div>
         </dl>
         <Link href={backHref} className="link">
-          Change dates or guests
+          {l("Change dates or guests", "Cambiar fechas o huéspedes")}
         </Link>
 
-        <h2 className="invoice-heading">Price details</h2>
+        <h2 className="invoice-heading">{l("Price details", "Detalle del precio")}</h2>
         {quoteError ? (
           <p className="notice error" role="alert">
-            {quoteError} <Link href={backHref}>Pick different dates</Link>
+            {msg(quoteError)} <Link href={backHref}>{l("Pick different dates", "Elige otras fechas")}</Link>
           </p>
         ) : !quote ? (
-          <p className="notice">Calculating your total…</p>
+          <p className="notice">{l("Calculating your total…", "Calculando tu total…")}</p>
         ) : (
           <>
-            {promoError && <p className="notice error">{promoError}</p>}
+            {promoError && (
+              <p className="notice error">
+                {l("Promo code not applied:", "Código promocional no aplicado:")} {msg(promoError)}
+              </p>
+            )}
             <FullInvoice quote={quote} />
           </>
         )}
 
-        <h2 className="invoice-heading">Cancellation policy: {POLICIES[policy].name}</h2>
+        <h2 className="invoice-heading">
+          {l("Cancellation policy", "Política de cancelación")}: {policyName(policy, lang)}
+        </h2>
         <ul className="policy-lines">
-          {policyDeadlines(policy, zonedInstant(stay.checkIn, checkInHour)).map((l) => (
-            <li key={l}>{l}</li>
+          {policyDeadlines(policy, zonedInstant(stay.checkIn, checkInHour), "America/New_York", lang).map((x) => (
+            <li key={x}>{x}</li>
           ))}
-          <li>{GRACE_NOTE}</li>
-          <li>{FEES_NOTE}</li>
+          <li>{graceNote(lang)}</li>
+          <li>{feesNote(lang)}</li>
         </ul>
       </section>
 
-      <section className="checkout-pay summary" aria-label="Pay">
+      <section className="checkout-pay summary" aria-label={l("Pay", "Pagar")}>
         {!quote ? (
-          <p className="notice">{quoteError ? "Pick dates that are open to continue." : "One moment…"}</p>
+          <p className="notice">
+            {quoteError ? l("Pick dates that are open to continue.", "Elige fechas disponibles para continuar.") : l("One moment…", "Un momento…")}
+          </p>
         ) : !user ? (
-          <AuthPanel intro="Create an account or sign in to finish booking. Your trips and receipts are saved there." />
+          <AuthPanel
+            intro={l(
+              "Create an account or sign in to finish booking. Your trips and receipts are saved there.",
+              "Crea una cuenta o inicia sesión para terminar la reserva. Ahí quedan guardados tus viajes y recibos.",
+            )}
+          />
         ) : !user.emailVerified ? (
           <VerifyEmail email={user.email} />
         ) : (
-          <form className="guest-form" onSubmit={pay}>
+          <form className="guest-form" onSubmit={payWithCard}>
             <p className="booking-as">
-              Booking as{" "}
+              {l("Booking as", "Reservando como")}{" "}
               <strong>
                 {user.firstName} {user.lastName}
               </strong>
               <br />
               {user.email}
             </p>
-            <SquareCard ref={cardRef} />
+
+            <label className="agree">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+              <span>
+                {l("I agree to the", "Acepto las")}{" "}
+                <a href="/house-rules" target="_blank" rel="noopener">
+                  {l("house rules", "reglas de la casa")}
+                </a>
+                {l(", the ", ", el ")}
+                <a href="/rental-agreement" target="_blank" rel="noopener">
+                  {l("rental agreement", "contrato de alquiler")}
+                </a>{" "}
+                {l("and the cancellation policy.", "y la política de cancelación.")}
+              </span>
+            </label>
+
+            <SquareCard
+              ref={cardRef}
+              walletAmountCents={quote.total}
+              beforeWallet={mustAgree}
+              onWalletToken={(token) => book(token)}
+            />
             {payError && (
               <p className="notice error" role="alert">
                 {payError}
               </p>
             )}
             <button className="pay" type="submit" disabled={paying}>
-              {paying ? "Confirming your dates…" : `Pay ${money(quote.total)}`}
+              {paying ? l("Confirming your dates…", "Confirmando tus fechas…") : `${l("Pay", "Pagar")} ${money(quote.total)}`}
             </button>
             <p className="fine">
-              By selecting Pay, you agree to the cancellation policy. Your card is held, not charged, until your dates
-              are confirmed. If they were taken in the meantime, the hold is released.
+              {l(
+                "Your card is held, not charged, until your dates are confirmed. If they were taken in the meantime, the hold is released.",
+                "Tu tarjeta queda retenida, no cobrada, hasta confirmar tus fechas. Si alguien las tomó mientras tanto, la retención se libera.",
+              )}
             </p>
           </form>
         )}

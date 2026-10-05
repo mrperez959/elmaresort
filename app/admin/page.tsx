@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { AdminLogin, AdminReviews, AdminSettings, CopyField, AdminCancel } from "@/components/Admin";
+import { AdminLogin, AdminReviews, AdminSettings, CopyField, AdminCancel, AdminBlocks } from "@/components/Admin";
+import { query } from "@/lib/db";
 import { listReviews } from "@/lib/reviews";
 import { exportToken } from "@/lib/calendar-export";
 import { SignOutButton } from "@/components/AuthPanel";
@@ -23,12 +24,16 @@ export default async function Admin() {
     );
   }
 
-  const [settings, bookings, checks, reviews, h] = await Promise.all([
+  const [settings, bookings, checks, reviews, h, blocks] = await Promise.all([
     getSettings(),
     recentBookings(),
     runChecks(),
     listReviews(),
     headers(),
+    query<{ id: string; start: string; end: string; note: string }>(
+      `SELECT id, to_char(start_date, 'YYYY-MM-DD') AS start, to_char(end_date, 'YYYY-MM-DD') AS "end", note
+       FROM owner_blocks WHERE end_date >= CURRENT_DATE ORDER BY start_date`,
+    ),
   ]);
   // Use the public production domain (deployment-specific URLs can be password-protected by Vercel).
   const host =
@@ -46,6 +51,9 @@ export default async function Admin() {
           </Link>
           <Link href="/admin/promos" className="manage-link">
             Influencer codes →
+          </Link>
+          <Link href="/admin/reports" className="manage-link">
+            Reports →
           </Link>
           <SignOutButton admin />
         </div>
@@ -80,6 +88,9 @@ export default async function Admin() {
 
       <h2 className="admin-section">Reviews</h2>
       <AdminReviews initial={reviews} />
+
+      <h2 className="admin-section">Blocked dates</h2>
+      <AdminBlocks blocks={blocks} />
 
       <h2 className="admin-section">Direct bookings</h2>
       {bookings.length === 0 ? (

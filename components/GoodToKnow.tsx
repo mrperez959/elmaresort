@@ -1,41 +1,65 @@
 import { Clock, CalendarX, PawPrint } from "lucide-react";
-import { POLICIES, GRACE_NOTE, FEES_NOTE, type PolicyId } from "@/lib/policy";
-import { money } from "@/lib/format";
+import Link from "next/link";
+import { policyName, policySummary, graceNote, feesNote, type PolicyId } from "@/lib/policy";
+import { money, hourLabel } from "@/lib/format";
+import { makeL, type Lang } from "@/lib/i18n";
 
-const hourLabel = (h: number) =>
-  new Intl.DateTimeFormat("en-US", { hour: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 1, h)));
-
-export function GoodToKnow(props: { policy: PolicyId; checkInHour: number; checkOutHour: number; maxPets: number; petFee: number }) {
-  const p = POLICIES[props.policy];
+export function GoodToKnow(props: {
+  policy: PolicyId;
+  checkInHour: number;
+  checkOutHour: number;
+  maxPets: number;
+  petFee: number;
+  rules: string[];
+  lang: Lang;
+}) {
+  const { lang } = props;
+  const l = makeL(lang);
   return (
     <section className="good-to-know" aria-labelledby="gtk-heading">
-      <h2 id="gtk-heading">Good to know</h2>
+      <h2 id="gtk-heading">{l("Good to know", "Para saber")}</h2>
       <div className="gtk-grid">
         <div>
           <h3>
-            <Clock size={20} strokeWidth={1.75} aria-hidden="true" /> Check-in and check-out
+            <Clock size={20} strokeWidth={1.75} aria-hidden="true" /> {l("Check-in and house rules", "Llegada y reglas")}
           </h3>
           <p>
-            Check-in after {hourLabel(props.checkInHour)}. Check-out by {hourLabel(props.checkOutHour)}.
+            {l(
+              `Check-in after ${hourLabel(props.checkInHour, lang)}. Check-out by ${hourLabel(props.checkOutHour, lang)}.`,
+              `Llegada desde las ${hourLabel(props.checkInHour, lang)}. Salida antes de las ${hourLabel(props.checkOutHour, lang)}.`,
+            )}
+          </p>
+          {props.rules.map((r) => (
+            <p key={r}>{r}</p>
+          ))}
+          <p>
+            <Link href="/house-rules" className="manage-link">
+              {l("All house rules", "Todas las reglas")}
+            </Link>
           </p>
         </div>
         <div>
           <h3>
-            <CalendarX size={20} strokeWidth={1.75} aria-hidden="true" /> Cancellation policy: {p.name}
+            <CalendarX size={20} strokeWidth={1.75} aria-hidden="true" /> {l("Cancellation policy", "Política de cancelación")}:{" "}
+            {policyName(props.policy, lang)}
           </h3>
-          <p>{p.summary}</p>
+          <p>{policySummary(props.policy, lang)}</p>
           <p className="fine">
-            {GRACE_NOTE} {FEES_NOTE} You can change or cancel your trip yourself from your account.
+            {graceNote(lang)} {feesNote(lang)}{" "}
+            {l("You can change or cancel your trip yourself from your account.", "Puedes cambiar o cancelar tu viaje tú mismo desde tu cuenta.")}
           </p>
         </div>
         <div>
           <h3>
-            <PawPrint size={20} strokeWidth={1.75} aria-hidden="true" /> Pets
+            <PawPrint size={20} strokeWidth={1.75} aria-hidden="true" /> {l("Pets", "Mascotas")}
           </h3>
           <p>
             {props.maxPets > 0
-              ? `Up to ${props.maxPets} ${props.maxPets === 1 ? "pet" : "pets"} welcome, ${money(props.petFee)} per stay.`
-              : "Pets aren't allowed."}
+              ? l(
+                  `Up to ${props.maxPets} ${props.maxPets === 1 ? "pet" : "pets"} welcome, ${money(props.petFee)} per stay.`,
+                  `Se admiten hasta ${props.maxPets} ${props.maxPets === 1 ? "mascota" : "mascotas"}, ${money(props.petFee)} por estadía.`,
+                )
+              : l("Pets aren't allowed.", "No se admiten mascotas.")}
           </p>
         </div>
       </div>

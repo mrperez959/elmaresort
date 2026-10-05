@@ -12,7 +12,8 @@ export async function POST(req: Request) {
   const email = String(b.email ?? "").trim().slice(0, 200);
   if (!EMAIL.test(email)) return fail("Enter a valid email address.");
   try {
-    if (await findUserWithHash(email)) await sendCode(email, "reset", clientIp(req));
+    const found = await findUserWithHash(email);
+    if (found) await sendCode(email, "reset", clientIp(req), found.user.lang);
   } catch (err) {
     if (err instanceof CodeError) return fail(err.message, 429);
     console.error("[reset/request]", err);

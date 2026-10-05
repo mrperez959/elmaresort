@@ -1,4 +1,5 @@
 // Browser-safe formatting helpers.
+import { locale, type Lang } from "./i18n";
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const usdWhole = new Intl.NumberFormat("en-US", {
@@ -14,8 +15,8 @@ function asDate(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
 }
 
-export function longDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
+export function longDate(iso: string, lang: Lang = "en") {
+  return new Intl.DateTimeFormat(locale(lang), {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -23,8 +24,8 @@ export function longDate(iso: string) {
   }).format(asDate(iso));
 }
 
-export function a11yDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", {
+export function a11yDate(iso: string, lang: Lang = "en") {
+  return new Intl.DateTimeFormat(locale(lang), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -33,10 +34,12 @@ export function a11yDate(iso: string) {
   }).format(asDate(iso));
 }
 
-export function monthLabel(year: number, month: number) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month, 15)));
+export function monthLabel(year: number, month: number, lang: Lang = "en") {
+  const s = new Intl.DateTimeFormat(locale(lang), { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(Date.UTC(year, month, 15)),
+  );
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+export const hourLabel = (h: number, lang: Lang = "en") =>
+  new Intl.DateTimeFormat(locale(lang), { hour: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 1, h)));

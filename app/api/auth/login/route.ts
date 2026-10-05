@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     await reset(`login:${email}`);
     await startGuestSession(found.user.id, found.sessionVersion);
     if (!found.user.emailVerified) {
-      await sendCode(found.user.email, "verify", ip).catch((e) => {
+      await sendCode(found.user.email, "verify", ip, found.user.lang).catch((e) => {
         if (!(e instanceof CodeError)) throw e; // a recent code is still valid
       });
       return Response.json({ ok: true, needsVerification: true });

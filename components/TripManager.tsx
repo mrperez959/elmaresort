@@ -7,6 +7,7 @@ import { SquareCard, type SquareCardHandle } from "./SquareCard";
 import { FullInvoice } from "./Invoice";
 import type { PublicUser, Quote } from "@/lib/types";
 import { money } from "@/lib/format";
+import { useL } from "./LangProvider";
 
 type Preview = { next: Quote; difference: number; note: string };
 
@@ -25,6 +26,7 @@ type Props = {
 export function TripManager(props: Props) {
   const { code, quote, user, canChange, refundNow } = props;
   const router = useRouter();
+  const { l, msg } = useL();
   const [stay, setStay] = useState({
     checkIn: quote.checkIn,
     checkOut: quote.checkOut,
@@ -61,7 +63,7 @@ export function TripManager(props: Props) {
       body: JSON.stringify(body),
     });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error ?? "Something went wrong.");
+    if (!r.ok) throw new Error(msg(data.error ?? "Something went wrong."));
     return data;
   }
 
@@ -69,9 +71,10 @@ export function TripManager(props: Props) {
     setBusy(true);
     setError(null);
     try {
-      setPreview(await post("preview", stay));
+      const p = await post("preview", stay);
+      setPreview({ ...p, note: msg(p.note) });
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -84,7 +87,7 @@ export function TripManager(props: Props) {
     try {
       let card = {};
       if (preview.difference > 0) {
-        if (!cardRef.current) throw new Error("The card form isn't ready yet.");
+        if (!cardRef.current) throw new Error(msg("The payment form isn't ready yet."));
         const sourceId = await cardRef.current.tokenize(preview.difference, {
           givenName: user.firstName,
           familyName: user.lastName,
@@ -96,15 +99,18 @@ export function TripManager(props: Props) {
       await post("change", { ...stay, ...card, expectedDifference: preview.difference });
       setDone(
         preview.difference > 0
-          ? `Your trip was updated and ${money(preview.difference)} was charged.`
+          ? l(`Your trip was updated and ${money(preview.difference)} was charged.`, `Tu viaje se actualizó y se cobraron ${money(preview.difference)}.`)
           : preview.difference < 0
-            ? `Your trip was updated. ${money(-preview.difference)} is on its way back to your card.`
-            : "Your trip was updated.",
+            ? l(
+                `Your trip was updated. ${money(-preview.difference)} is on its way back to your card.`,
+                `Tu viaje se actualizó. ${money(-preview.difference)} vuelven a tu tarjeta.`,
+              )
+            : l("Your trip was updated.", "Tu viaje se actualizó."),
       );
       setPreview(null);
       router.refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -112,19 +118,29 @@ export function TripManager(props: Props) {
 
   async function cancel() {
     if (!refundNow) return;
-    const msg =
+    const question =
       refundNow.amount > 0
-        ? `Cancel this trip? ${money(refundNow.amount)} will be refunded to your card. This can't be undone.`
-        : "Cancel this trip? Under the cancellation policy nothing will be refunded. This can't be undone.";
-    if (!window.confirm(msg)) return;
+        ? l(
+            `Cancel this trip? ${money(refundNow.amount)} will be refunded to your card. This can't be undone.`,
+            `¿Cancelar este viaje? Se devolverán ${money(refundNow.amount)} a tu tarjeta. No se puede deshacer.`,
+          )
+        : l(
+            "Cancel this trip? Under the cancellation policy nothing will be refunded. This can't be undone.",
+            "¿Cancelar este viaje? Según la política de cancelación no se devolverá nada. No se puede deshacer.",
+          );
+    if (!window.confirm(question)) return;
     setBusy(true);
     setError(null);
     try {
       const r = await post("cancel", {});
-      setDone(r.refunded > 0 ? `Your trip was cancelled. ${money(r.refunded)} is on its way back to your card.` : "Your trip was cancelled.");
+      setDone(
+        r.refunded > 0
+          ? l(`Your trip was cancelled. ${money(r.refunded)} is on its way back to your card.`, `Tu viaje se canceló. ${money(r.refunded)} vuelven a tu tarjeta.`)
+          : l("Your trip was cancelled.", "Tu viaje se canceló."),
+      );
       router.refresh();
     } catch (err) {
-      setError((err as Error).message);
+      setError(msg((err as Error).message));
     } finally {
       setBusy(false);
     }
@@ -150,66 +166,71 @@ export function TripManager(props: Props) {
       )}
 
       <section aria-labelledby="change-heading" className="trip-box">
-        <h3 id="change-heading">Change dates or guests</h3>
+        <h3 id="change-heading">{l("Change dates or guests", "Cambiar fechas o huéspedes")}</h3>
         <div className="date-pair">
           <label className="field">
-            <span className="field-label">Check-in</span>
+            <span className="field-label">{l("Check-in", "Llegada")}</span>
             <span className="field-input">
               <input type="date" min={props.today} value={stay.checkIn} onChange={(e) => edit({ checkIn: e.target.value })} />
             </span>
           </label>
           <label className="field">
-            <span className="field-label">Check-out</span>
+            <span className="field-label">{l("Check-out", "Salida")}</span>
             <span className="field-input">
               <input type="date" min={stay.checkIn} value={stay.checkOut} onChange={(e) => edit({ checkOut: e.target.value })} />
             </span>
           </label>
         </div>
         <div className="guests">
-          <Stepper label="Adults" value={stay.adults} min={1} max={props.maxGuests - stay.children} onChange={(n) => edit({ adults: n })} />
-          <Stepper label="Children" hint="Ages 2–12" value={stay.children} min={0} max={props.maxGuests - stay.adults} onChange={(n) => edit({ children: n })} />
-          <Stepper label="Infants" hint="Under 2" value={stay.infants} min={0} max={5} onChange={(n) => edit({ infants: n })} />
+          <Stepper label={l("Adults", "Adultos")} value={stay.adults} min={1} max={props.maxGuests - stay.children} onChange={(n) => edit({ adults: n })} />
+          <Stepper label={l("Children", "Niños")} hint={l("Ages 2–12", "De 2 a 12 años")} value={stay.children} min={0} max={props.maxGuests - stay.adults} onChange={(n) => edit({ children: n })} />
+          <Stepper label={l("Infants", "Bebés")} hint={l("Under 2", "Menores de 2")} value={stay.infants} min={0} max={5} onChange={(n) => edit({ infants: n })} />
           {props.maxPets > 0 && (
-            <Stepper label="Pets" hint={`${money(props.petFee)} per stay`} value={stay.pets} min={0} max={props.maxPets} onChange={(n) => edit({ pets: n })} />
+            <Stepper label={l("Pets", "Mascotas")} hint={l(`${money(props.petFee)} per stay`, `${money(props.petFee)} por estadía`)} value={stay.pets} min={0} max={props.maxPets} onChange={(n) => edit({ pets: n })} />
           )}
         </div>
         <p className="fine">
-          {guests} of {props.maxGuests} guests.
+          {l(`${guests} of ${props.maxGuests} guests.`, `${guests} de ${props.maxGuests} huéspedes.`)}
         </p>
 
         {!preview ? (
           <button type="button" className="pay" disabled={busy || unchanged} onClick={checkPrice}>
-            {busy ? "Checking…" : "See the new price"}
+            {busy ? l("Checking…", "Revisando…") : l("See the new price", "Ver el nuevo precio")}
           </button>
         ) : (
           <div className="change-preview">
-            <h4>New price</h4>
+            <h4>{l("New price", "Nuevo precio")}</h4>
             <FullInvoice quote={preview.next} />
             <p className="change-diff">
               {preview.difference > 0
-                ? `You pay ${money(preview.difference)} now.`
+                ? l(`You pay ${money(preview.difference)} now.`, `Pagas ${money(preview.difference)} ahora.`)
                 : preview.difference < 0
-                  ? `You get ${money(-preview.difference)} back.`
-                  : "No payment needed."}
+                  ? l(`You get ${money(-preview.difference)} back.`, `Te devolvemos ${money(-preview.difference)}.`)
+                  : l("No payment needed.", "No hace falta pagar.")}
               <span>{preview.note}</span>
             </p>
             {preview.difference > 0 && <SquareCard ref={cardRef} />}
             <button type="button" className="pay" disabled={busy} onClick={confirmChange}>
-              {busy ? "Updating…" : preview.difference > 0 ? `Pay ${money(preview.difference)} and confirm` : "Confirm change"}
+              {busy
+                ? l("Updating…", "Actualizando…")
+                : preview.difference > 0
+                  ? l(`Pay ${money(preview.difference)} and confirm`, `Pagar ${money(preview.difference)} y confirmar`)
+                  : l("Confirm change", "Confirmar cambio")}
             </button>
           </div>
         )}
       </section>
 
       <section aria-labelledby="cancel-heading" className="trip-box">
-        <h3 id="cancel-heading">Cancel trip</h3>
+        <h3 id="cancel-heading">{l("Cancel trip", "Cancelar viaje")}</h3>
         {refundNow && (
           <p>
-            If you cancel now, you get back <strong>{money(refundNow.amount)}</strong>. <span className="fine">({refundNow.reason}.)</span>
+            {l("If you cancel now, you get back", "Si cancelas ahora, te devolvemos")} <strong>{money(refundNow.amount)}</strong>.{" "}
+            <span className="fine">({msg(refundNow.reason)}.)</span>
           </p>
         )}
         <button type="button" className="danger" disabled={busy} onClick={cancel}>
-          Cancel this trip
+          {l("Cancel this trip", "Cancelar este viaje")}
         </button>
       </section>
     </div>

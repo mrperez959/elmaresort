@@ -5,19 +5,21 @@ import { currentUser } from "@/lib/auth";
 import { bookingsForUser } from "@/lib/users";
 import { todayAtProperty } from "@/lib/dates";
 import { longDate, money } from "@/lib/format";
+import { getL } from "@/lib/lang-server";
+import { guestsWord, petsWord } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your trips" };
 
 export default async function Account() {
-  const user = await currentUser();
+  const [user, { lang, l }] = await Promise.all([currentUser(), getL()]);
 
   if (!user) {
     return (
       <main className="page">
         <SiteHeader user={null} showTagline={false} />
         <section className="account narrow-col">
-          <h2>Sign in to see your trips</h2>
+          <h2>{l("Sign in to see your trips", "Inicia sesión para ver tus viajes")}</h2>
           <AuthPanel initialMode="login" />
         </section>
       </main>
@@ -29,7 +31,7 @@ export default async function Account() {
       <main className="page">
         <SiteHeader user={user} showTagline={false} />
         <section className="account narrow-col">
-          <h2>Hi, {user.firstName}</h2>
+          <h2>{l(`Hi, ${user.firstName}`, `Hola, ${user.firstName}`)}</h2>
           <VerifyEmail email={user.email} />
           <SignOutButton />
         </section>
@@ -47,18 +49,20 @@ export default async function Account() {
       {items.map((b) => (
         <li key={b.code}>
           <div className="trip-dates">
-            {longDate(b.checkIn)} to {longDate(b.checkOut)}
+            {longDate(b.checkIn, lang)} {l("to", "al")} {longDate(b.checkOut, lang)}
           </div>
           <div className="trip-meta">
-            {b.guests} {b.guests === 1 ? "guest" : "guests"}
-            {b.pets ? `, ${b.pets} ${b.pets === 1 ? "pet" : "pets"}` : ""}. Paid {money(b.total)}. Code{" "}
-            <strong>{b.code}</strong>
-            {b.status === "cancelled" ? " Cancelled." : ""}
-            {b.refunded ? ` Refunded ${money(b.refunded)}.` : ""}
+            {b.guests} {guestsWord(lang, b.guests)}
+            {b.pets ? `, ${b.pets} ${petsWord(lang, b.pets)}` : ""}. {l("Paid", "Pagado")} {money(b.total)}.{" "}
+            {l("Code", "Código")} <strong>{b.code}</strong>
+            {b.status === "cancelled" ? l(" Cancelled.", " Cancelado.") : ""}
+            {b.refunded ? l(` Refunded ${money(b.refunded)}.`, ` Reembolsado ${money(b.refunded)}.`) : ""}
           </div>
           {b.quote ? (
             <Link href={`/account/trips/${b.code}`} className="manage-link">
-              {b.status === "confirmed" && b.checkOut >= today ? "View, change or cancel" : "View receipt"}
+              {b.status === "confirmed" && b.checkOut >= today
+                ? l("View, change or cancel", "Ver, cambiar o cancelar")
+                : l("View receipt", "Ver recibo")}
             </Link>
           ) : null}
         </li>
@@ -71,7 +75,7 @@ export default async function Account() {
       <SiteHeader user={user} showTagline={false} />
       <section className="account">
         <div className="account-head">
-          <h2>Hi, {user.firstName}</h2>
+          <h2>{l(`Hi, ${user.firstName}`, `Hola, ${user.firstName}`)}</h2>
           <SignOutButton />
         </div>
         <p className="fine">
@@ -79,18 +83,18 @@ export default async function Account() {
           {user.phone ? `, ${user.phone}` : ""}
         </p>
 
-        <h3>Upcoming</h3>
+        <h3>{l("Upcoming", "Próximos")}</h3>
         {upcoming.length ? (
           list(upcoming)
         ) : (
           <p>
-            No upcoming trips. <Link href="/#book">Pick your dates</Link>
+            {l("No upcoming trips.", "No tienes viajes próximos.")} <Link href="/#book">{l("Pick your dates", "Elige tus fechas")}</Link>
           </p>
         )}
 
         {past.length > 0 && (
           <>
-            <h3>Past and cancelled</h3>
+            <h3>{l("Past and cancelled", "Pasados y cancelados")}</h3>
             {list(past)}
           </>
         )}

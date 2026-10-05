@@ -6,17 +6,18 @@ import { TripManager } from "@/components/TripManager";
 import { currentUser } from "@/lib/auth";
 import { getTrip, canChange, refundNow } from "@/lib/trips";
 import { getSettings } from "@/lib/settings";
-import { POLICIES, policyDeadlines, GRACE_NOTE, FEES_NOTE } from "@/lib/policy";
+import { policyName, policyDeadlines, graceNote, feesNote } from "@/lib/policy";
 import { todayAtProperty } from "@/lib/dates";
-import { longDate, money } from "@/lib/format";
+import { longDate, money, hourLabel } from "@/lib/format";
+import { getL } from "@/lib/lang-server";
+import { guestsWord, infantsWord, petsWord } from "@/lib/i18n";
+import { checkInMessage } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your trip" };
 
-const hourLabel = (h: number) => new Intl.DateTimeFormat("en-US", { hour: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 0, 1, h)));
-
 export default async function TripPage({ params }: { params: Promise<{ code: string }> }) {
-  const user = await currentUser();
+  const [user, { lang, l }] = await Promise.all([currentUser(), getL()]);
   if (!user || !user.emailVerified) redirect("/account");
   const { code } = await params;
   const [trip, settings] = await Promise.all([getTrip(code, user.id), getSettings()]);
@@ -27,58 +28,62 @@ export default async function TripPage({ params }: { params: Promise<{ code: str
   const changeable = canChange(trip);
   const refund = changeable ? refundNow(trip) : null;
   const guests = q.adults + q.children;
+  const arrivalDay = trip.status === "confirmed" && today >= q.checkIn && today <= q.checkOut;
 
   return (
     <main className="page">
       <SiteHeader user={user} showTagline={false} />
       <p>
         <Link href="/account" className="link">
-          ← Your trips
+          ← {l("Your trips", "Tus viajes")}
         </Link>
       </p>
       <h1 className="checkout-title">
-        {longDate(q.checkIn)} to {longDate(q.checkOut)}
+        {longDate(q.checkIn, lang)} {l("to", "al")} {longDate(q.checkOut, lang)}
       </h1>
 
       <div className="checkout">
         <section className="checkout-trip">
           <dl className="trip-facts">
             <div>
-              <dt>Confirmation code</dt>
+              <dt>{l("Confirmation code", "Código de confirmación")}</dt>
               <dd>{trip.code}</dd>
             </div>
             <div>
-              <dt>Status</dt>
+              <dt>{l("Status", "Estado")}</dt>
               <dd className={trip.status === "cancelled" ? "status-cancelled" : undefined}>
-                {trip.status === "cancelled" ? "Cancelled" : "Confirmed"}
+                {trip.status === "cancelled" ? l("Cancelled", "Cancelado") : l("Confirmed", "Confirmado")}
               </dd>
             </div>
             <div>
-              <dt>Check-in and check-out</dt>
+              <dt>{l("Check-in and check-out", "Llegada y salida")}</dt>
               <dd>
-                Check-in after {hourLabel(settings.checkInHour)}, check-out by {hourLabel(settings.checkOutHour)}
+                {l(
+                  `Check-in after ${hourLabel(settings.checkInHour, lang)}, check-out by ${hourLabel(settings.checkOutHour, lang)}`,
+                  `Llegada desde las ${hourLabel(settings.checkInHour, lang)}, salida antes de las ${hourLabel(settings.checkOutHour, lang)}`,
+                )}
               </dd>
             </div>
             <div>
-              <dt>Guests</dt>
+              <dt>{l("Guests", "Huéspedes")}</dt>
               <dd>
-                {guests} {guests === 1 ? "guest" : "guests"}
-                {q.infants ? `, ${q.infants} ${q.infants === 1 ? "infant" : "infants"}` : ""}
-                {q.pets ? `, ${q.pets} ${q.pets === 1 ? "pet" : "pets"}` : ""}
+                {guests} {guestsWord(lang, guests)}
+                {q.infants ? `, ${q.infants} ${infantsWord(lang, q.infants)}` : ""}
+                {q.pets ? `, ${q.pets} ${petsWord(lang, q.pets)}` : ""}
               </dd>
             </div>
             {trip.refunded > 0 && (
               <div>
-                <dt>Refunded</dt>
+                <dt>{l("Refunded", "Reembolsado")}</dt>
                 <dd>{money(trip.refunded)}</dd>
               </div>
             )}
           </dl>
 
-          <h2 className="invoice-heading">Address and check-in</h2>
+          <h2 className="invoice-heading">{l("Address and check-in", "Dirección y llegada")}</h2>
           {trip.status !== "confirmed" ? (
-            <p className="fine">Not available for cancelled trips.</p>
-          ) : today >= q.checkIn && today <= q.checkOut && settings.propertyAddress ? (
+            <p className="fine">{l("Not available for cancelled trips.", "No disponible para viajes cancelados.")}</p>
+          ) : arrivalDay && settings.propertyAddress ? (
             <div className="arrival">
               <p className="arrival-address">{settings.propertyAddress}</p>
               <a
@@ -87,27 +92,35 @@ export default async function TripPage({ params }: { params: Promise<{ code: str
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Directions in Google Maps
+                {l("Directions in Google Maps", "Cómo llegar en Google Maps")}
               </a>
-              {settings.checkInInstructions && <p className="arrival-notes">{settings.checkInInstructions}</p>}
+              {settings.checkInInstructions && (
+                <p className="arrival-notes">{checkInMessage(settings, lang, user.firstName)}</p>
+              )}
             </div>
           ) : (
             <p>
-              The exact address and check-in instructions appear here on <strong>{longDate(q.checkIn)}</strong>, your
-              check-in day. Until then you can see the area on the map on our home page.
+              {l("The exact address and check-in instructions appear here on", "La dirección exacta y las instrucciones de llegada aparecen aquí el")}{" "}
+              <strong>{longDate(q.checkIn, lang)}</strong>
+              {l(
+                ", your check-in day. We'll also email them to you that morning.",
+                ", tu día de llegada. También te las enviaremos por email esa mañana.",
+              )}
             </p>
           )}
 
-          <h2 className="invoice-heading">Receipt</h2>
+          <h2 className="invoice-heading">{l("Receipt", "Recibo")}</h2>
           <FullInvoice quote={q} />
 
-          <h2 className="invoice-heading">Cancellation policy: {POLICIES[trip.policy].name}</h2>
+          <h2 className="invoice-heading">
+            {l("Cancellation policy", "Política de cancelación")}: {policyName(trip.policy, lang)}
+          </h2>
           <ul className="policy-lines">
-            {policyDeadlines(trip.policy, trip.checkInAt).map((l) => (
-              <li key={l}>{l}</li>
+            {policyDeadlines(trip.policy, trip.checkInAt, "America/New_York", lang).map((x) => (
+              <li key={x}>{x}</li>
             ))}
-            <li>{GRACE_NOTE}</li>
-            <li>{FEES_NOTE}</li>
+            <li>{graceNote(lang)}</li>
+            <li>{feesNote(lang)}</li>
           </ul>
         </section>
 
@@ -122,13 +135,16 @@ export default async function TripPage({ params }: { params: Promise<{ code: str
               maxGuests={settings.maxGuests}
               maxPets={settings.maxPets}
               petFee={settings.petFee}
-              today={todayAtProperty()}
+              today={today}
             />
           ) : (
             <p className="notice">
               {trip.status === "cancelled"
-                ? "This trip was cancelled."
-                : "Check-in time has passed, so this trip can't be changed online. Use the chat button to reach us."}
+                ? l("This trip was cancelled.", "Este viaje fue cancelado.")
+                : l(
+                    "Check-in time has passed, so this trip can't be changed online. Use the chat button to reach us.",
+                    "Ya pasó la hora de llegada, así que este viaje no se puede cambiar en línea. Escríbenos con el botón de chat.",
+                  )}
             </p>
           )}
         </aside>

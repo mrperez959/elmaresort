@@ -1,25 +1,26 @@
 import { AMENITY_ICONS } from "./amenity-icons";
 import { AllAmenities } from "./AllAmenities";
-import type { AmenityIcon } from "@/lib/property";
+import type { Amenity } from "@/lib/property";
+import type { Lang } from "@/lib/i18n";
 
-type Item = { icon: AmenityIcon; title: string; detail?: string };
-
-export function Amenities({ highlights, all }: { highlights: Item[]; all: Item[] }) {
+export function Amenities({ highlights, all, lang }: { highlights: Amenity[]; all: Amenity[]; lang: Lang }) {
+  const es = lang === "es";
   return (
     <section className="amenities" aria-labelledby="amenities-heading">
-      <h2 id="amenities-heading">What&apos;s here</h2>
+      <h2 id="amenities-heading">{es ? "Lo que hay" : "What's here"}</h2>
       <div>
         <ul className="highlights">
           {highlights.map((a) => {
             const Icon = AMENITY_ICONS[a.icon];
+            const detail = es ? a.detailEs : a.detail;
             return (
               <li key={a.title}>
                 <span className="amenity-icon" aria-hidden="true">
                   <Icon size={22} strokeWidth={1.75} />
                 </span>
                 <div>
-                  <h3>{a.title}</h3>
-                  {a.detail && <p>{a.detail}</p>}
+                  <h3>{es ? a.titleEs : a.title}</h3>
+                  {detail && <p>{detail}</p>}
                 </div>
               </li>
             );

@@ -123,6 +123,20 @@ export async function runChecks(): Promise<Check[]> {
           },
   );
   checks.push(
+    process.env.CRON_SECRET
+      ? { name: "Daily emails", status: "ok", message: "Check-in, thank-you and still-available emails run every morning." }
+      : {
+          name: "Daily emails",
+          status: "warn",
+          message: "Add CRON_SECRET in Vercel (any long random text) and redeploy to turn on the automatic daily emails.",
+        },
+  );
+  checks.push(
+    settings.checkInInstructions
+      ? { name: "Check-in message", status: "ok", message: "Saved. It's emailed on the morning of each check-in." }
+      : { name: "Check-in message", status: "warn", message: "Empty. Add your check-in day message below." },
+  );
+  checks.push(
     settings.propertyAddress
       ? { name: "Address", status: "ok", message: "Saved. Guests see it on their trip page from check-in day." }
       : { name: "Address", status: "warn", message: "Not set. Add the exact address below so guests get it on check-in day." },

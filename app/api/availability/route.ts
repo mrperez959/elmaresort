@@ -1,5 +1,6 @@
 import { getDays } from "@/lib/availability";
 import { allow, clientIp } from "@/lib/ratelimit";
+import { alertOwner } from "@/lib/alerts";
 import { getSettings } from "@/lib/settings";
 import { nightlyRate } from "@/lib/pricing";
 import { addDays, todayAtProperty } from "@/lib/dates";
@@ -19,6 +20,7 @@ export async function GET(req: Request) {
     return Response.json({ days: body }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[availability]", err);
+    await alertOwner("calendar availability", err);
     return Response.json({ error: "Availability couldn't be loaded." }, { status: 502 });
   }
 }

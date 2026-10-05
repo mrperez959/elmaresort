@@ -15,6 +15,14 @@ export type Day = {
 };
 
 /** Nights already sold on this website (confirmed bookings). */
+/** Dates the owner blocked by hand in /admin. */
+async function ownerBlocks(): Promise<Busy[]> {
+  return query<{ start: string; end: string }>(
+    `SELECT to_char(start_date, 'YYYY-MM-DD') AS start, to_char(end_date, 'YYYY-MM-DD') AS "end"
+     FROM owner_blocks WHERE end_date >= CURRENT_DATE - 1`,
+  );
+}
+
 async function directBookings(excludeId?: string): Promise<Busy[]> {
   const rows = await query<{ start: string; end: string }>(
     `SELECT to_char(check_in, 'YYYY-MM-DD') AS start, to_char(check_out, 'YYYY-MM-DD') AS "end"
@@ -39,16 +47,17 @@ export async function getDays(
   if (settings.icalUrls.length === 0) {
     throw new Error("No calendar links configured. Add your Airbnb and Vrbo export links in /admin.");
   }
-  const [feeds, direct] = await Promise.all([
+  const [feeds, direct, blocks] = await Promise.all([
     Promise.all(settings.icalUrls.map((u) => getFeed(u, { forBooking }))),
     directBookings(replacing?.id),
+    ownerBlocks(),
   ]);
   // Airbnb/Hospitable re-publish our own direct bookings (we export them), so
   // when a guest changes their trip, ignore the span that is exactly their current stay.
   const external = feeds
     .flatMap((f) => f.busy)
     .filter((b) => !(replacing && b.start === replacing.start && b.end === replacing.end));
-  const busy = [...external, ...direct].filter((b) => b.end > start && b.start <= end);
+  const busy = [...external, ...direct, ...blocks].filter((b) => b.end > start && b.start <= end);
 
   const days: Day[] = [];
   for (let d = start; d <= end; d = addDays(d, 1)) {
