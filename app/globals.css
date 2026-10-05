@@ -1595,55 +1595,6 @@ a {
   font-size: 1.1rem;
 }
 
-/* ---------- Good to know ---------- */
-
-.good-to-know {
-  margin-bottom: 56px;
-}
-
-.good-to-know h2 {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 2.4rem;
-  margin: 0 0 18px;
-}
-
-.gtk-grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  gap: 20px;
-}
-
-.gtk-grid > div {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 18px 20px;
-}
-
-.gtk-grid h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1rem;
-  margin: 0 0 8px;
-}
-
-.gtk-grid h3 svg {
-  color: var(--ocean);
-  flex: none;
-}
-
-.gtk-grid p {
-  margin: 0 0 6px;
-}
-
-@media (max-width: 860px) {
-  .gtk-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ---------- Policy and trips ---------- */
 
 .policy-lines {

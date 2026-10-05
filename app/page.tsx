@@ -4,14 +4,12 @@ import { Gallery } from "@/components/Gallery";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Amenities } from "@/components/Amenities";
 import { Reviews } from "@/components/Reviews";
-import { GoodToKnow } from "@/components/GoodToKnow";
 import { AreaMap } from "@/components/AreaMap";
 import { AMENITIES, HOUSE_AMENITIES, PHOTOS, type Amenity } from "@/lib/property";
 import { getSettings, toPublicSettings } from "@/lib/settings";
 import { getReviews } from "@/lib/reviews";
 import { currentUser } from "@/lib/auth";
 import { getL } from "@/lib/lang-server";
-import { lines } from "@/lib/legal";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -73,15 +71,6 @@ export default async function Home() {
       <Suspense fallback={null}>
         <ReviewsSection />
       </Suspense>
-      <GoodToKnow
-        policy={settings.cancellationPolicy}
-        checkInHour={settings.checkInHour}
-        checkOutHour={settings.checkOutHour}
-        maxPets={settings.maxPets}
-        petFee={settings.petFee}
-        rules={lines(lang === "es" ? settings.houseRulesEs : settings.houseRules)}
-        lang={lang}
-      />
       <AreaMap area={settings.approxArea} center={settings.mapCenter} zoom={settings.mapZoom} lang={lang} />
       <section id="book" aria-label={lang === "es" ? "Reserva tu estadía" : "Book your stay"}>
         <Suspense fallback={<p className="notice">…</p>}>
