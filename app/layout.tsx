@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ChatButton } from "@/components/ChatButton";
+import { Analytics } from "@/components/Analytics";
 import { getSettings } from "@/lib/settings";
 
 const name = process.env.NEXT_PUBLIC_PROPERTY_NAME ?? "Vacation rental";
@@ -35,6 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {children}
+        <Analytics />
         {c && (c.whatsapp || c.phone || c.email) && <ChatButton {...c} propertyName={name} />}
       </body>
     </html>

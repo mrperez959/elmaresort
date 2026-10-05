@@ -7,6 +7,7 @@ import { Month } from "./Calendar";
 import { PriceBeforeTaxes } from "./Invoice";
 import { Stepper } from "./Stepper";
 import { POLICIES } from "@/lib/policy";
+import { track } from "@/lib/track";
 import type { PublicDay, PublicSettings, Quote } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
 
@@ -114,7 +115,10 @@ export function BookingWidget({ settings }: Props) {
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) setQuoteError(body.error ?? "The price couldn't be calculated.");
-        else setQuote(body.quote);
+        else {
+          setQuote(body.quote);
+          track("dates_selected", { n: body.quote.nights });
+        }
       })
       .catch((e) => {
         if (e.name !== "AbortError") setQuoteError("The price couldn't be calculated. Try again.");
@@ -262,6 +266,7 @@ export function BookingWidget({ settings }: Props) {
             <PriceBeforeTaxes quote={quote} />
             <Link
               className="pay continue"
+              onClick={() => track("checkout_start", { n: quote.total })}
               href={`/checkout?${new URLSearchParams({
                 checkIn: quote.checkIn,
                 checkOut: quote.checkOut,

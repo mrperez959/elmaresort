@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@/lib/track";
 
 type Mode = "signup" | "login" | "forgot" | "reset";
 
@@ -112,7 +113,10 @@ export function AuthPanel({ intro, initialMode = "signup" }: { intro?: string; i
     setBusy(true);
     setError(null);
     try {
-      if (mode === "signup") await post("/api/auth/signup", form);
+      if (mode === "signup") {
+        await post("/api/auth/signup", form);
+        track("signup");
+      }
       else if (mode === "login") await post("/api/auth/login", { email: form.email, password: form.password });
       else if (mode === "forgot") {
         await post("/api/auth/reset/request", { email: form.email });

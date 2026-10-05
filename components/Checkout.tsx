@@ -7,6 +7,7 @@ import { AuthPanel, VerifyEmail } from "./AuthPanel";
 import { FullInvoice } from "./Invoice";
 import type { BookResult, PublicUser, Quote, StayRequest } from "@/lib/types";
 import { longDate, money } from "@/lib/format";
+import { track } from "@/lib/track";
 import { POLICIES, policyDeadlines, zonedInstant, GRACE_NOTE, FEES_NOTE, type PolicyId } from "@/lib/policy";
 
 type Props = { stay: StayRequest; user: PublicUser | null; policy: PolicyId; checkInHour: number };
@@ -27,6 +28,10 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
     infants: String(stay.infants),
     pets: String(stay.pets),
   })}#book`;
+
+  useEffect(() => {
+    track("checkout_view");
+  }, []);
 
   useEffect(() => {
     fetch("/api/quote", {
@@ -66,6 +71,7 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
       });
       const result: BookResult = await r.json();
       if (result.state === "confirmed") {
+        track("booking", { l: result.code, n: result.quote.total });
         setBooked(result);
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;

@@ -80,6 +80,24 @@ Es un botón flotante en todas las páginas, excepto `/admin`. A los pocos segun
 
 Los números y el email se configuran en `/admin` → *Chat button*. Si están vacíos, el botón no aparece.
 
+## Métricas (`/admin/analytics`)
+
+La analítica es propia: los datos se guardan en tu misma base de datos, sin Google Analytics, sin cookies de terceros y sin guardar direcciones IP. El panel muestra:
+
+- **Resumen:** visitantes, visitas, páginas vistas, tiempo promedio en el sitio, reservas, ingresos y **tasa de conversión** (visitas que terminaron en reserva).
+- **Visitantes por día:** los días con reserva salen en coral.
+- **Embudo:** visitó → abrió las fotos → eligió fechas → fue al checkout → creó cuenta → reservó, con el porcentaje de cada paso.
+- **Fotos:** cuántos abren el visor, cuánto tiempo se quedan y el tiempo en cada foto.
+- **País y estado** (EE. UU.), según la conexión del visitante (dato aproximado de Vercel).
+- **De dónde vienen:** Google, Instagram, directo… y **campañas** con su conversión e ingresos.
+- **Dispositivos:** móvil, escritorio o tablet.
+
+**Campañas:** en el enlace de cada anuncio agrega `?utm_source=facebook&utm_medium=paid&utm_campaign=nombre`. Cada campaña aparece en su propia fila.
+
+**Detalles:**
+- No se cuentan los bots ni tus propias visitas mientras tengas abierta la sesión de admin.
+- Los datos de más de unos 13 meses se borran solos.
+
 ## Panel de admin (`/admin`)
 
 Se entra con `ADMIN_PASSWORD`. Contiene:

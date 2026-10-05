@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo } from "@/lib/property";
+import { track } from "@/lib/track";
 
 function Img({ photo, size, priority = false }: { photo: Photo; size: "sm" | "lg"; priority?: boolean }) {
   return (
@@ -23,6 +24,26 @@ function Img({ photo, size, priority = false }: { photo: Photo; size: "sm" | "lg
 export function Gallery({ photos }: { photos: Photo[] }) {
   const [open, setOpen] = useState<number | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  // Time spent on each photo and in the viewer overall.
+  const viewerSince = useRef<number | null>(null);
+  const photoSince = useRef<{ n: number; at: number } | null>(null);
+
+  useEffect(() => {
+    const now = Date.now();
+    if (photoSince.current) {
+      const ms = now - photoSince.current.at;
+      if (ms > 300) track("photo_view", { n: photoSince.current.n, ms });
+    }
+    photoSince.current = open === null ? null : { n: open, at: now };
+    if (open !== null && viewerSince.current === null) {
+      viewerSince.current = now;
+      track("gallery_open", { n: open });
+    }
+    if (open === null && viewerSince.current !== null) {
+      track("gallery_time", { ms: now - viewerSince.current });
+      viewerSince.current = null;
+    }
+  }, [open]);
 
   const show = useCallback((i: number) => {
     setOpen(i);

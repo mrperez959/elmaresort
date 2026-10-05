@@ -114,6 +114,37 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   count         int NOT NULL
 );
 
+-- First-party analytics. No IP addresses are stored.
+CREATE TABLE IF NOT EXISTS visits (
+  id            uuid PRIMARY KEY,
+  visitor_id    uuid NOT NULL,
+  first_seen    timestamptz NOT NULL DEFAULT now(),
+  last_seen     timestamptz NOT NULL DEFAULT now(),
+  country       text,
+  region        text,
+  city          text,
+  device        text,
+  referrer      text,
+  utm_source    text,
+  utm_medium    text,
+  utm_campaign  text,
+  landing       text,
+  user_id       uuid
+);
+CREATE INDEX IF NOT EXISTS visits_first_seen ON visits (first_seen);
+CREATE TABLE IF NOT EXISTS visit_events (
+  id          bigserial PRIMARY KEY,
+  visit_id    uuid NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+  type        text NOT NULL,
+  path        text,
+  n           int,
+  ms          int,
+  label       text,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS visit_events_visit ON visit_events (visit_id);
+CREATE INDEX IF NOT EXISTS visit_events_type_time ON visit_events (type, created_at);
+
 CREATE TABLE IF NOT EXISTS reviews (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL,

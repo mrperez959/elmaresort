@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { AdminLogin, AdminReviews, AdminSettings, CopyField, AdminCancel } from "@/components/Admin";
 import { listReviews } from "@/lib/reviews";
@@ -39,7 +40,12 @@ export default async function Admin() {
     <main className="page admin">
       <div className="account-head">
         <h1 className="admin-title">Settings</h1>
-        <SignOutButton admin />
+        <div className="admin-links">
+          <Link href="/admin/analytics" className="manage-link">
+            Analytics →
+          </Link>
+          <SignOutButton admin />
+        </div>
       </div>
       <section className="checks" aria-label="Connections">
         <h2 className="admin-section first">Connections</h2>
