@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LANG_COOKIE, localizeMessage, makeL, type Lang } from "@/lib/i18n";
 
 const Ctx = createContext<Lang>("en");
@@ -19,6 +19,7 @@ export function useL() {
 export function LangToggle() {
   const { lang } = useL();
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const next: Lang = lang === "es" ? "en" : "es";
   return (
     <button
@@ -27,7 +28,14 @@ export function LangToggle() {
       lang={next}
       onClick={() => {
         document.cookie = `${LANG_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-        router.refresh();
+        // Public pages have their own address per language (/ and /es/...).
+        const base = pathname === "/es" ? "/" : pathname.startsWith("/es/") ? pathname.slice(3) : pathname;
+        const isPublic = ["/", "/house-rules", "/rental-agreement", "/refunds", "/privacy"].includes(base);
+        if (isPublic) {
+          const target = next === "es" ? (base === "/" ? "/es" : `/es${base}`) : base;
+          router.push(`${target}${window.location.search}`);
+          router.refresh();
+        } else router.refresh();
       }}
     >
       {lang === "es" ? "English" : "Español"}

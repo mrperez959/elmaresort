@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 import { currentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -6,7 +7,10 @@ import { rentalAgreement, AGREEMENT_VERSION } from "@/lib/legal";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Rental agreement" };
+
+export function generateMetadata() {
+  return pageMetadata("/rental-agreement", { en: "Rental agreement", es: "Contrato de alquiler" });
+}
 
 export default async function Agreement() {
   const [user, settings, { lang, l }] = await Promise.all([currentUser(), getSettings(), getL()]);

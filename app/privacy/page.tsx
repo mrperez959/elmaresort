@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 import { currentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -6,7 +7,10 @@ import { privacyPolicy, AGREEMENT_VERSION } from "@/lib/legal";
 import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Privacy policy" };
+
+export function generateMetadata() {
+  return pageMetadata("/privacy", { en: "Privacy policy", es: "Política de privacidad" });
+}
 
 export default async function Privacy() {
   const [user, settings, { lang, l }] = await Promise.all([currentUser(), getSettings(), getL()]);

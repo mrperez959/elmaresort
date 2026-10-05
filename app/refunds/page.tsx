@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 import { currentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -5,7 +6,10 @@ import { getL } from "@/lib/lang-server";
 import { policyName, policySummary, graceNote, feesNote } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Cancellation and refunds" };
+
+export function generateMetadata() {
+  return pageMetadata("/refunds", { en: "Cancellation and refunds", es: "Cancelaciones y reembolsos" });
+}
 
 export default async function Refunds() {
   const [user, settings, { lang, l }] = await Promise.all([currentUser(), getSettings(), getL()]);

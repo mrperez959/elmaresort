@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { LegalPage } from "@/components/LegalPage";
 import { currentUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -5,7 +6,10 @@ import { getL } from "@/lib/lang-server";
 import { houseRules } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "House rules" };
+
+export function generateMetadata() {
+  return pageMetadata("/house-rules", { en: "House rules", es: "Reglas de la casa" });
+}
 
 export default async function HouseRules() {
   const [user, settings, { lang, l }] = await Promise.all([currentUser(), getSettings(), getL()]);

@@ -2520,3 +2520,107 @@ a {
     transition: none;
   }
 }
+
+/* ---------- About, nearby and FAQ ---------- */
+
+.about {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 32px;
+  margin-bottom: 56px;
+}
+
+.about h2,
+.faq h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.about p {
+  margin: 0 0 12px;
+  max-width: 70ch;
+  font-size: 1.05rem;
+}
+
+.nearby-title {
+  font-size: 0.95rem;
+  margin: 20px 0 6px;
+}
+
+.nearby {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 360px;
+}
+
+.nearby li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.nearby li span:last-child {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.faq {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 32px;
+  margin: 64px 0 24px;
+}
+
+.faq-list {
+  border-top: 2px solid var(--ink);
+}
+
+.faq details {
+  border-bottom: 1px solid var(--line);
+}
+
+.faq summary {
+  cursor: pointer;
+  padding: 14px 28px 14px 0;
+  font-weight: 700;
+  list-style: none;
+  position: relative;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::after {
+  content: "+";
+  position: absolute;
+  right: 4px;
+  top: 10px;
+  font-size: 1.4rem;
+  color: var(--coral);
+}
+
+.faq details[open] summary::after {
+  content: "–";
+}
+
+.faq details p {
+  margin: 0 0 16px;
+  max-width: 70ch;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 860px) {
+  .about,
+  .faq {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

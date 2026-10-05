@@ -80,6 +80,21 @@ Es un botón flotante en todas las páginas, excepto `/admin`. A los pocos segun
 
 Los números y el email se configuran en `/admin` → *Chat button*. Si están vacíos, el botón no aparece.
 
+## SEO y búsquedas con IA
+
+**Lo que ya hace la web:**
+- **Inglés y español con direcciones propias:** `/` y `/es` (también `/es/house-rules`, etc.), con `canonical` y `hreflang` para que Google indexe ambas versiones.
+- **Títulos y descripciones con palabras clave** por idioma, y una imagen al compartir (`public/og.jpg`).
+- **Datos estructurados:** VacationRental (sin la dirección) y FAQPage (preguntas frecuentes).
+- **Contenido para Google y las IA:** "Sobre la casa", tiempos en auto a lugares cercanos y preguntas frecuentes. Se editan en `lib/content.ts`; **revisa los tiempos en auto**.
+- **`/sitemap.xml` y `/robots.txt`.**
+- **`/llms.txt`:** un resumen en texto para asistentes de IA, generado del mismo contenido.
+
+**Lo que tienes que hacer tú (una vez, con el dominio propio ya conectado):**
+1. **Google Search Console** (search.google.com/search-console): agrega la propiedad `https://elmaresort.com` con el método "Etiqueta HTML". Copia solo el valor de `content="..."` en la variable `GOOGLE_SITE_VERIFICATION` y haz Redeploy. Luego pulsa *Verificar* y envía el sitemap: `https://elmaresort.com/sitemap.xml`.
+2. **Bing Webmaster Tools** (bing.com/webmasters): puedes importar el sitio desde Search Console. Si no, usa la etiqueta meta y pon su valor en `BING_SITE_VERIFICATION`. Bing también alimenta varias búsquedas con IA.
+3. **Menciones externas:** enlaces desde tus redes, los influencers y directorios de Tampa. Es lo que más pesa para que una IA recomiende el lugar.
+
 ## Idiomas
 
 La web está en inglés y español. Detecta el idioma del navegador, y arriba hay un botón "Español" / "English" para cambiarlo.

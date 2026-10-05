@@ -28,6 +28,11 @@ export const metadata: Metadata = {
     alternateLocale: ["es_US"],
   },
   twitter: { card: "summary_large_image", title: name, description, images: ["/og.jpg"] },
+  // Search Console / Bing Webmaster Tools ownership tags, set in Vercel.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
 };
 
 export const viewport: Viewport = { themeColor: "#01325b" };

@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { Suspense } from "react";
 import { BookingWidget } from "@/components/BookingWidget";
 import { Gallery } from "@/components/Gallery";
@@ -5,6 +6,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Amenities } from "@/components/Amenities";
 import { Reviews } from "@/components/Reviews";
 import { AreaMap } from "@/components/AreaMap";
+import { AboutHome } from "@/components/AboutHome";
+import { Faq } from "@/components/Faq";
+import { aboutHome, faqs, NEARBY } from "@/lib/content";
 import { AMENITIES, HOUSE_AMENITIES, PHOTOS, type Amenity } from "@/lib/property";
 import { getSettings, toPublicSettings } from "@/lib/settings";
 import { getReviews } from "@/lib/reviews";
@@ -13,6 +17,10 @@ import { getL } from "@/lib/lang-server";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export function generateMetadata() {
+  return pageMetadata("/");
+}
 
 /** Streams in after the rest of the page so a slow review fetch never blocks it. */
 async function ReviewsSection() {
@@ -46,12 +54,16 @@ export default async function Home() {
   ];
 
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const about = aboutHome(lang, settings);
+  const faqItems = faqs(lang, settings);
   // Structured data so search engines understand this is a vacation rental. No street address.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "VacationRental",
     name: process.env.NEXT_PUBLIC_PROPERTY_NAME ?? "Elma Resort",
-    url: host ? `https://${host}` : undefined,
+    description: about.join(" "),
+    url: host ? `https://${host}${lang === "es" ? "/es" : ""}` : undefined,
+    inLanguage: lang === "es" ? "es-US" : "en-US",
     image: PHOTOS.slice(0, 6).map((p) => `${host ? `https://${host}` : ""}${p.src}.webp`),
     address: { "@type": "PostalAddress", addressLocality: "Tampa", addressRegion: "FL", addressCountry: "US" },
     containsPlace: { "@type": "Accommodation", occupancy: { "@type": "QuantitativeValue", maxValue: settings.maxGuests } },
@@ -65,18 +77,36 @@ export default async function Home() {
   return (
     <main className="page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faqItems.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+          }).replace(/</g, "\\u003c"),
+        }}
+      />
       <SiteHeader user={user} />
       <Gallery photos={PHOTOS} />
+      <AboutHome paragraphs={about} lang={lang} />
       <Amenities highlights={amenities} all={HOUSE_AMENITIES} lang={lang} />
       <Suspense fallback={null}>
         <ReviewsSection />
       </Suspense>
-      <AreaMap area={settings.approxArea} center={settings.mapCenter} zoom={settings.mapZoom} lang={lang} />
+      <AreaMap
+        area={settings.approxArea}
+        center={settings.mapCenter}
+        zoom={settings.mapZoom}
+        lang={lang}
+        nearby={NEARBY.map((n) => ({ name: lang === "es" ? n.es : n.en, minutes: n.minutes }))}
+      />
       <section id="book" aria-label={lang === "es" ? "Reserva tu estadía" : "Book your stay"}>
         <Suspense fallback={<p className="notice">…</p>}>
           <BookingWidget settings={toPublicSettings(settings)} />
         </Suspense>
       </section>
+      <Faq items={faqItems} lang={lang} />
     </main>
   );
 }
