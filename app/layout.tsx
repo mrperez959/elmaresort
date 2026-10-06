@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { display, body } from "./fonts";
 import { ChatButton } from "@/components/ChatButton";
 import { Analytics } from "@/components/Analytics";
 import { LangProvider } from "@/components/LangProvider";
@@ -57,15 +58,7 @@ async function contact() {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [c, lang] = await Promise.all([contact(), getLang()]);
   return (
-    <html lang={lang}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&display=swap"
-        />
-      </head>
+    <html lang={lang} className={`${display.variable} ${body.variable}`}>
       <body>
         <LangProvider lang={lang}>
         {children}

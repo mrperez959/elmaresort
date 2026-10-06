@@ -10,3 +10,10 @@ Useful ones for this site:
 - `mobile-native`: make the site feel native on phones.
 
 To update: `npx skills@latest add emilkowalski/skills` or copy the folders again from the repo.
+
+## Impeccable
+
+`impeccable/` is Paul Bakaus's design skill (https://github.com/pbakaus/impeccable, Apache 2.0, see
+`impeccable/LICENSE` and `impeccable/NOTICE.md`). Run `/impeccable typeset`, `/impeccable polish`,
+`/impeccable audit`, etc. in Claude Code. Its typography detector:
+`.claude/skills/impeccable/scripts/impeccable detect --json --scope type app components`

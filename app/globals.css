@@ -17,8 +17,17 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
-  --body: "Atkinson Hyperlegible", "Segoe UI", Roboto, sans-serif;
+  /* Type: two families, one job each (impeccable/typeset) */
+  --display: var(--font-display, "Cormorant Garamond"), "Iowan Old Style", Georgia, serif;
+  --body: var(--font-body, "Atkinson Hyperlegible"), "Segoe UI", Roboto, sans-serif;
+
+  /* Role scale. Body never goes under 16px; small sizes are labels and metadata only. */
+  --text-xs: 0.8125rem; /* 13px: fine print, metadata */
+  --text-sm: 0.875rem; /* 14px: labels, captions, secondary lines */
+  --text-base: 1rem; /* 16px: body */
+  --text-lg: 1.125rem; /* 18px: lead paragraphs, item titles */
+  --display-3: 1.625rem; /* panel and card headings */
+  --display-2: clamp(2rem, 1.45rem + 2vw, 2.625rem); /* section headings */
 }
 
 * {
@@ -156,7 +165,7 @@ a {
 .calendar-head h2 {
   font-family: var(--display);
   font-weight: 500;
-  font-size: 1.5rem;
+  font-size: var(--display-3);
   margin: 0;
 }
 
@@ -190,7 +199,7 @@ a {
 .month-name {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   margin: 0 0 12px;
 }
 
@@ -201,7 +210,7 @@ a {
 }
 
 .weekday {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
   text-align: center;
   padding-bottom: 6px;
@@ -231,12 +240,12 @@ a {
 .cell .num {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
 .cell .price {
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
@@ -297,7 +306,7 @@ a {
   gap: 20px;
   flex-wrap: wrap;
   margin-top: 20px;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -347,7 +356,7 @@ a {
 }
 
 .dates dt {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 
@@ -364,7 +373,7 @@ a {
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -385,7 +394,7 @@ a {
 }
 
 .stepper-hint {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 
@@ -403,7 +412,7 @@ a {
   border: 1px solid var(--ink-soft);
   background: var(--paper);
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   line-height: 1;
 }
 
@@ -452,7 +461,7 @@ a {
 .guest-form label {
   display: grid;
   gap: 4px;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -461,7 +470,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--paper);
-  font-size: 1rem;
+  font-size: var(--text-base);
   width: 100%;
 }
 
@@ -478,7 +487,7 @@ a {
   color: var(--paper);
   font-family: var(--body);
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   cursor: pointer;
 }
 
@@ -494,13 +503,13 @@ a {
 }
 
 .fine {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
   margin: 0;
 }
 
 .notice {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
   margin: 12px 0 0;
 }
@@ -517,7 +526,7 @@ a {
 }
 
 .card-label {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -571,7 +580,7 @@ a {
     grid-template-columns: 1fr;
   }
   .calendar-head h2 {
-    font-size: 1.2rem;
+    font-size: 1.375rem;
   }
 }
 
@@ -672,7 +681,7 @@ a {
 .lightbox figcaption {
   display: flex;
   gap: 16px;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   max-width: 70ch;
   text-align: center;
 }
@@ -733,7 +742,7 @@ a {
 .reviews h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.9rem;
+  font-size: var(--display-3);
   line-height: 1.05;
   letter-spacing: -0.02em;
   margin: 0;
@@ -772,7 +781,7 @@ a {
 .amenities h3 {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   margin: 2px 0 2px;
 }
 
@@ -791,7 +800,7 @@ a {
 .all-amenities-title {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   margin: 0 0 16px;
 }
 
@@ -818,7 +827,7 @@ a {
 .all-amenities li small {
   display: block;
   color: var(--ink-soft);
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
 }
 
 .all-amenities .more-reviews {
@@ -863,7 +872,7 @@ a {
 }
 
 .score-count {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
   max-width: 26ch;
 }
@@ -924,12 +933,12 @@ a {
   padding-top: 10px;
   border-top: 1px solid var(--line);
   display: grid;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .review-by span {
   color: var(--ink-soft);
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
 }
 
 .more-reviews {
@@ -996,7 +1005,7 @@ a {
   justify-content: flex-end;
   gap: 18px;
   margin: -24px 0 12px;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 .masthead h1 a {
@@ -1012,7 +1021,7 @@ a {
   border-radius: 4px;
   display: grid;
   gap: 4px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -1028,7 +1037,7 @@ a {
 
 .auth-intro {
   margin: 0 0 12px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .auth-tabs {
@@ -1059,7 +1068,7 @@ a {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .account {
@@ -1074,7 +1083,7 @@ a {
 .account-head h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 2rem;
+  font-size: var(--display-3);
   letter-spacing: -0.02em;
   margin: 0 0 8px;
 }
@@ -1082,7 +1091,7 @@ a {
 .account h3 {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.2rem;
+  font-size: var(--text-lg);
   margin: 32px 0 10px;
 }
 
@@ -1108,12 +1117,12 @@ a {
 .trip-dates {
   font-family: var(--body);
   font-weight: 500;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .trip-meta {
   color: var(--ink-soft);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 /* ---------- Admin ---------- */
@@ -1125,7 +1134,7 @@ a {
 .admin-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 2.4rem;
+  font-size: var(--display-2);
   letter-spacing: -0.02em;
   margin: 0 0 24px;
 }
@@ -1153,7 +1162,7 @@ a {
 .admin-form legend {
   font-family: var(--body);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   padding: 0 6px;
 }
 
@@ -1164,7 +1173,7 @@ a {
 }
 
 .field-label {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
@@ -1186,7 +1195,7 @@ a {
   padding: 9px 10px;
   width: 100%;
   min-width: 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   background: transparent;
   outline: none;
 }
@@ -1194,11 +1203,11 @@ a {
 .affix {
   padding: 0 10px;
   color: var(--ink-soft);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .field-hint {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 
@@ -1223,7 +1232,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 4px 8px;
@@ -1261,7 +1270,7 @@ a {
 .admin-section {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: var(--display-3);
   margin: 48px 0 12px;
 }
 
@@ -1273,7 +1282,7 @@ a {
   width: 100%;
   border-collapse: collapse;
   background: var(--paper);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .admin-table th,
@@ -1285,7 +1294,7 @@ a {
 }
 
 .admin-table th {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
   border-bottom: 2px solid var(--ink);
 }
@@ -1316,7 +1325,7 @@ a {
   align-items: baseline;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .check:last-child {
@@ -1365,7 +1374,7 @@ a {
   border-radius: 4px;
   padding: 9px 10px;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   background: var(--paper);
   color: var(--ink);
 }
@@ -1411,7 +1420,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   background: var(--mist);
   color: var(--ink);
 }
@@ -1441,7 +1450,7 @@ a {
   gap: 16px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .admin-review-list li:last-child {
@@ -1455,7 +1464,7 @@ a {
 
 /* Cormorant reads small: give serif headings more size and weight */
 .calendar-head h2 {
-  font-size: 1.8rem;
+  font-size: var(--display-3);
   font-weight: 600;
 }
 .amenities h2,
@@ -1471,7 +1480,7 @@ a {
 }
 .amenities h2,
 .reviews h2 {
-  font-size: 2.4rem;
+  font-size: var(--display-2);
 }
 
 @media (max-width: 640px) {
@@ -1523,12 +1532,12 @@ a {
 
 .price-total-label {
   color: var(--ink-soft);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .breakdown.compact {
   margin: 4px 0 8px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .breakdown tr.discount th,
@@ -1567,7 +1576,7 @@ a {
 .checkout-title {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 2.6rem;
+  font-size: var(--display-2);
   margin: 0 0 24px;
 }
 
@@ -1582,7 +1591,7 @@ a {
 .receipt h3 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.7rem;
+  font-size: var(--display-3);
   margin: 0 0 12px;
 }
 
@@ -1597,7 +1606,7 @@ a {
 }
 
 .trip-facts dt {
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -1628,19 +1637,19 @@ a {
 
 .trip-receipt summary {
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .trip-receipt .breakdown {
   margin: 10px 0 4px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .trip-receipt .breakdown.invoice tfoot th,
 .trip-receipt .breakdown.invoice tfoot td {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 /* ---------- Policy and trips ---------- */
@@ -1656,7 +1665,7 @@ a {
 .manage-link {
   display: inline-block;
   margin-top: 6px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--ocean);
 }
@@ -1673,7 +1682,7 @@ a {
 .trip-box h3 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: var(--display-3);
   margin: 0 0 12px;
 }
 
@@ -1693,25 +1702,25 @@ a {
 }
 
 .change-preview .breakdown {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .change-preview .breakdown.invoice tfoot th,
 .change-preview .breakdown.invoice tfoot td {
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .change-diff {
   display: grid;
   gap: 4px;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   margin: 0 0 12px;
 }
 
 .change-diff span {
   font-weight: 400;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
@@ -1746,7 +1755,7 @@ a {
 
 .admin-cancel .link {
   padding: 0;
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
 }
 
 /* ---------- Floating chat ---------- */
@@ -1833,7 +1842,7 @@ a {
 
 .chat-head strong {
   font-family: var(--display);
-  font-size: 1.35rem;
+  font-size: var(--display-3);
   line-height: 1.15;
 }
 
@@ -1846,13 +1855,13 @@ a {
 
 .chat-sub {
   margin: 6px 0 12px;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
 .chat-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   margin-bottom: 4px;
 }
@@ -1863,7 +1872,7 @@ a {
   border-radius: 6px;
   padding: 9px 10px;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   resize: vertical;
 }
 
@@ -1906,7 +1915,7 @@ a {
 .error-detail {
   display: block;
   margin-top: 4px;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
   word-break: break-word;
 }
@@ -1944,7 +1953,7 @@ a {
 .area-map h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 2.4rem;
+  font-size: var(--display-2);
   margin: 0 0 12px;
 }
 
@@ -1986,7 +1995,7 @@ a {
 
 .arrival-address {
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   margin: 0 0 4px;
 }
 
@@ -2021,7 +2030,7 @@ a {
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--paper);
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   box-shadow: 0 2px 6px rgba(1, 50, 91, 0.18);
   pointer-events: none;
@@ -2097,7 +2106,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 999px;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   background: var(--paper);
 }
 
@@ -2123,7 +2132,7 @@ a {
 }
 
 .kpis span {
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 
@@ -2135,7 +2144,7 @@ a {
 
 .kpis small {
   color: var(--ink-soft);
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
 }
 
 .kpis .kpi-main {
@@ -2183,7 +2192,7 @@ a {
 .funnel-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   margin-bottom: 3px;
 }
 
@@ -2235,7 +2244,7 @@ a {
   margin: 8px 0;
   background: var(--mist);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   overflow-x: auto;
   white-space: nowrap;
 }
@@ -2299,7 +2308,7 @@ a {
   padding: 8px 12px;
   background: var(--ocean-soft);
   border-radius: 4px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 /* ---------- Admin: influencer codes ---------- */
@@ -2323,7 +2332,7 @@ a {
   margin-top: 4px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 
@@ -2346,7 +2355,7 @@ a {
   border-top: 2px solid var(--ink);
   border-bottom: 0;
   color: var(--ink);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .promo-links {
@@ -2364,7 +2373,7 @@ a {
 .legal h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: var(--display-3);
   margin: 28px 0 8px;
 }
 
@@ -2373,7 +2382,7 @@ a {
 }
 
 .legal-intro {
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
 .site-footer {
@@ -2399,7 +2408,7 @@ a {
 
 .site-footer p {
   margin: 0 0 4px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .site-footer a {
@@ -2414,7 +2423,7 @@ a {
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 @media (max-width: 700px) {
@@ -2451,7 +2460,7 @@ a {
   align-items: center;
   gap: 10px;
   color: var(--ink-soft);
-  font-size: 0.82rem;
+  font-size: var(--text-xs);
 }
 
 .or-card::before,
@@ -2466,7 +2475,7 @@ a {
   grid-template-columns: 20px 1fr;
   gap: 10px;
   align-items: start;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   color: var(--ink) !important;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -2488,14 +2497,14 @@ a {
 
 .row-actions .link {
   padding: 0;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
 }
 
 .downloads .pay {
   display: inline-block;
   text-decoration: none;
   padding: 10px 16px;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
 }
 
 .admin-blocks .admin-form {
@@ -2551,7 +2560,7 @@ a {
   display: flex;
   justify-content: center;
   gap: 16px;
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   max-width: 80ch;
   text-align: center;
 }
@@ -2565,7 +2574,7 @@ a {
   }
   .lb-caption {
     bottom: 72px;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
   }
 }
 
@@ -2588,7 +2597,7 @@ a {
 .faq h2 {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 2.4rem;
+  font-size: var(--display-2);
   line-height: 1.05;
   margin: 0;
 }
@@ -2596,11 +2605,11 @@ a {
 .about p {
   margin: 0 0 12px;
   max-width: 70ch;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
 .nearby-title {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   margin: 20px 0 6px;
 }
 
@@ -2617,7 +2626,7 @@ a {
   gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .nearby li span:last-child {
@@ -2701,7 +2710,7 @@ a {
 .field-input.small input {
   width: 64px;
   padding: 6px 6px;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
 }
 
 .month-table {
@@ -2729,7 +2738,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 4px;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   min-width: 0;
 }
 
@@ -2740,7 +2749,7 @@ a {
 }
 
 .tier {
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2765,12 +2774,12 @@ a {
   padding: 4px 2px;
   border-radius: 4px;
   background: var(--mist);
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .pv b {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 
@@ -2899,4 +2908,71 @@ a {
     padding-left: max(14px, env(safe-area-inset-left, 0px));
     padding-right: max(14px, env(safe-area-inset-right, 0px));
   }
+}
+
+/* ---------- Typesetting (impeccable/typeset) ---------- */
+
+h1,
+h2,
+h3,
+h4,
+.checkout-title,
+.admin-title {
+  text-wrap: balance;
+  /* more space above a heading than below it */
+  line-height: 1.1;
+}
+
+p,
+li,
+dd,
+summary {
+  text-wrap: pretty;
+}
+
+/* Comfortable reading measure for long text */
+.legal,
+.about p,
+.faq details p,
+.policy-lines,
+.review-text {
+  max-width: 68ch;
+}
+
+.legal p,
+.legal li {
+  line-height: 1.6;
+}
+
+/* Light text on dark: a touch more air (footer, photo viewer) */
+.site-footer,
+.lightbox {
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+/* Prices and counts line up */
+.price,
+.breakdown,
+.price-total-amount,
+.nearby,
+.trip-meta,
+.admin-table td,
+.kpis strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Browser surfaces carry the palette too */
+::selection {
+  background: var(--coral-soft);
+  color: var(--navy);
+}
+
+input,
+textarea {
+  caret-color: var(--coral);
+}
+
+a {
+  text-decoration-thickness: 1px;
 }
