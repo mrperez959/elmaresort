@@ -23,7 +23,7 @@ export function AreaMap({
   const src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&z=${zoom}&hl=${lang}&output=embed`;
   return (
     <section className="area-map" aria-labelledby="map-heading">
-      <div className="area-text">
+      <div className="area-text" data-reveal>
         <h2 id="map-heading">{l("Where you'll be", "Dónde vas a estar")}</h2>
         <p className="area-name">
           <MapPin size={18} strokeWidth={1.75} aria-hidden="true" /> {area}
@@ -49,7 +49,7 @@ export function AreaMap({
           </>
         )}
       </div>
-      <div className="map-frame">
+      <div className="map-frame" data-reveal="map">
         <iframe
           className={center ? "map-static" : undefined}
           tabIndex={center ? -1 : undefined}

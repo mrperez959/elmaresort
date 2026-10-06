@@ -160,7 +160,7 @@ export function BookingWidget({ settings }: Props) {
 
   return (
     <div className="booking">
-      <section className="calendar-panel" aria-labelledby="dates-heading">
+      <section className="calendar-panel" aria-labelledby="dates-heading" data-reveal>
         <div className="calendar-head">
           <h2 id="dates-heading">
             {!checkIn
@@ -223,7 +223,7 @@ export function BookingWidget({ settings }: Props) {
         )}
       </section>
 
-      <aside className="summary" aria-label={l("Your booking", "Tu reserva")}>
+      <aside className="summary" aria-label={l("Your booking", "Tu reserva")} data-reveal style={{ "--i": 2 } as React.CSSProperties}>
         {perks.length > 0 && (
           <ul className="perks">
             {perks.map((p) => (

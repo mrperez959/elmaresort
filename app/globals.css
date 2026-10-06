@@ -116,8 +116,29 @@ a {
   flex-wrap: wrap;
   padding-bottom: 24px;
   margin-bottom: 32px;
-  border-bottom: 3px solid transparent;
-  border-image: linear-gradient(90deg, var(--navy) 0 55%, var(--ocean) 55% 75%, var(--coral) 75% 90%, var(--sunset) 90%) 1;
+  position: relative;
+}
+
+/* The brand rule draws itself in once, left to right, when the page loads. */
+.masthead::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--navy) 0 55%, var(--ocean) 55% 75%, var(--coral) 75% 90%, var(--sunset) 90%);
+  transform-origin: left center;
+  animation: rule-draw 900ms var(--ease-out) 150ms both;
+}
+
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 .masthead h1 {
@@ -2975,4 +2996,74 @@ textarea {
 
 a {
   text-decoration-thickness: 1px;
+}
+
+/* ---------- Scroll reveal ---------- */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hidden only when JS found it below the fold; everything else is just there. */
+[data-reveal].reveal-pending:not(.is-in) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+[data-reveal].reveal-pending {
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 650ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* The map opens like a window, then the pin drops onto the house. */
+[data-reveal="map"].reveal-pending:not(.is-in) {
+  opacity: 0;
+  transform: none;
+  clip-path: inset(10% 6% 10% 6% round 10px);
+}
+
+[data-reveal="map"].reveal-pending {
+  transition:
+    opacity 400ms var(--ease-out),
+    clip-path 800ms var(--ease-out);
+}
+
+[data-reveal="map"].reveal-pending:not(.is-in) .map-pin {
+  opacity: 0;
+  transform: translate(-50%, -100%) translateY(-28px);
+}
+
+[data-reveal="map"].reveal-pending .map-pin {
+  transition:
+    opacity 200ms var(--ease-out) 350ms,
+    transform 550ms cubic-bezier(0.34, 1.56, 0.64, 1) 350ms;
+}
+
+[data-reveal="map"].reveal-pending:not(.is-in) .map-circle {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+}
+
+[data-reveal="map"].reveal-pending .map-circle {
+  transition:
+    opacity 300ms var(--ease-out) 650ms,
+    transform 500ms var(--ease-out) 650ms;
+}
+
+/* Reduced motion: no movement, only a gentle fade (and the rule is just there). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [data-reveal].reveal-pending:not(.is-in),
+  [data-reveal="map"].reveal-pending:not(.is-in) .map-pin,
+  [data-reveal="map"].reveal-pending:not(.is-in) .map-circle {
+    transform: none !important;
+    clip-path: none !important;
+  }
+  .masthead::after {
+    animation: none;
+  }
 }

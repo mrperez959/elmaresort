@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import type { PublicReview, ReviewSummary } from "@/lib/reviews";
 import { useL } from "./LangProvider";
@@ -28,7 +28,7 @@ function ReviewCard({ review }: { review: PublicReview }) {
   const long = review.text.length > 320;
   const [open, setOpen] = useState(false);
   return (
-    <li className="review">
+    <li data-reveal className="review">
       <Stars rating={review.rating} />
       <p className={`review-text ${long && !open ? "clamped" : ""}`}>{review.text}</p>
       {long && (
@@ -46,6 +46,46 @@ function ReviewCard({ review }: { review: PublicReview }) {
   );
 }
 
+/** The rating counts up from 0 the first time it scrolls into view (once). */
+function CountUp({ value }: { value: number }) {
+  const decimals = Number.isInteger(value) ? 1 : String(value).split(".")[1].length;
+  const final = value.toFixed(decimals);
+  const ref = useRef<HTMLSpanElement>(null);
+  const [text, setText] = useState(final);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) return; // already on screen: leave it
+    setText((0).toFixed(decimals));
+    let raf = 0;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / 1100);
+        const eased = 1 - Math.pow(1 - t, 4);
+        setText((value * eased).toFixed(decimals));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, { rootMargin: "0px 0px -15% 0px" });
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [value, decimals]);
+
+  return (
+    <span ref={ref} className="score-number" aria-label={final}>
+      {text}
+    </span>
+  );
+}
+
 export function Reviews({ summary }: { summary: ReviewSummary }) {
   const { l } = useL();
   const [shown, setShown] = useState(6);
@@ -53,11 +93,11 @@ export function Reviews({ summary }: { summary: ReviewSummary }) {
 
   return (
     <section className="reviews" aria-labelledby="reviews-heading">
-      <div className="reviews-head">
+      <div className="reviews-head" data-reveal>
         <h2 id="reviews-heading">{l("What guests say", "Lo que dicen los huéspedes")}</h2>
         {avg !== null && (
           <div className="score">
-            <span className="score-number">{Number.isInteger(avg) ? avg.toFixed(1) : String(avg)}</span>
+            <CountUp value={avg} />
             <div>
               <Stars rating={avg} />
               <div className="score-count">
@@ -72,7 +112,7 @@ export function Reviews({ summary }: { summary: ReviewSummary }) {
       </div>
       {summary.items.length > 0 && (
         <>
-          <ul className="review-grid">
+          <ul className="review-grid" data-reveal-group>
             {summary.items.slice(0, shown).map((r) => (
               <ReviewCard key={r.id} review={r} />
             ))}
