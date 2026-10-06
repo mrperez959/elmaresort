@@ -87,7 +87,8 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
       if (result.state === "confirmed") {
         track("booking", { l: result.code, n: result.quote.total });
         setBooked(result);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" });
         return;
       }
       if (result.state === "price_changed") setQuote(result.quote);

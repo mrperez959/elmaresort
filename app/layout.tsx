@@ -35,7 +35,15 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#01325b" };
+// Edge to edge on phones (content padded with env(safe-area-inset-*)), the
+// status bar matches the page background, and the keyboard resizes the layout.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: "#f4f7fa",
+};
 
 async function contact() {
   try {

@@ -13,12 +13,50 @@
   --coral-soft: #ffe7df;
   --ocean-soft: #e3eef6;
   --error: #a72714;
+  /* Motion (emil-design-eng): strong ease-out for UI, drawer curve for gestures */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
   --display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
   --body: "Atkinson Hyperlegible", "Segoe UI", Roboto, sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  /* No grey flash on tap (iOS/Android); buttons give their own :active feedback */
+  -webkit-tap-highlight-color: transparent;
+  /* No font inflation when the phone turns to landscape */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Controls: no 300ms tap delay, and a long press doesn't select the label */
+button,
+a,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"],
+summary,
+.tile,
+.cell {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* iOS zooms into any field under 16px and never zooms back out */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 html,
@@ -203,8 +241,10 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
+@media (hover: hover) and (pointer: fine) {
 .cell:not(:disabled):hover {
   background: var(--mist);
+}
 }
 
 .cell.past {
@@ -442,8 +482,10 @@ a {
   cursor: pointer;
 }
 
+@media (hover: hover) and (pointer: fine) {
 .pay:hover:not(:disabled) {
   background: var(--ocean);
+}
 }
 
 .pay:disabled {
@@ -534,9 +576,12 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-property: opacity, background-color, color !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -590,7 +635,8 @@ a {
 
 .lightbox {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+  overscroll-behavior: contain;
   max-width: none;
   max-height: none;
   margin: 0;
@@ -617,7 +663,7 @@ a {
 
 .lightbox img {
   max-width: 100%;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100dvh - 140px);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -649,8 +695,10 @@ a {
   cursor: pointer;
 }
 
+@media (hover: hover) and (pointer: fine) {
 .lightbox button:hover {
   background: rgba(255, 255, 255, 0.24);
+}
 }
 
 .lb-close {
@@ -1678,8 +1726,10 @@ a {
   cursor: pointer;
 }
 
+@media (hover: hover) and (pointer: fine) {
 .danger:hover:not(:disabled) {
   background: #fdf0ed;
+}
 }
 
 .ok-note {
@@ -1725,8 +1775,10 @@ a {
   box-shadow: 0 6px 18px rgba(1, 50, 91, 0.28);
 }
 
+@media (hover: hover) and (pointer: fine) {
 .chat-fab:hover {
   filter: brightness(1.05);
+}
 }
 
 .chat-teaser {
@@ -1739,7 +1791,8 @@ a {
   border-radius: 14px 14px 4px 14px;
   box-shadow: 0 6px 18px rgba(1, 50, 91, 0.16);
   padding: 10px 8px 10px 14px;
-  animation: chat-pop 0.25s ease-out;
+  transform-origin: bottom right;
+  animation: chat-pop 200ms var(--ease-out);
 }
 
 .chat-teaser-text {
@@ -1767,7 +1820,8 @@ a {
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(1, 50, 91, 0.22);
   padding: 16px;
-  animation: chat-pop 0.2s ease-out;
+  transform-origin: bottom right;
+  animation: chat-pop 200ms var(--ease-out);
 }
 
 .chat-head {
@@ -1841,7 +1895,7 @@ a {
 @keyframes chat-pop {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -2464,7 +2518,7 @@ a {
 }
 
 .lb-track.animating {
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 260ms var(--ease-drawer);
 }
 
 .lb-slide {
@@ -2740,5 +2794,109 @@ a {
 @media (max-width: 700px) {
   .special-row {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- Press feedback (emil-design-eng / mobile-native) ---------- */
+
+.pay,
+.more-reviews,
+.promo-apply,
+.danger,
+.chat-fab,
+.chat-btn,
+.all-photos,
+.calendar-nav button,
+.stepper-controls button,
+.copy-field button,
+.lightbox button,
+.tile {
+  transition: transform 160ms var(--ease-out);
+}
+
+.pay:active:not(:disabled),
+.more-reviews:active,
+.promo-apply:active:not(:disabled),
+.danger:active:not(:disabled),
+.chat-btn:active,
+.all-photos:active,
+.copy-field button:active,
+.calendar-nav button:active:not(:disabled),
+.stepper-controls button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.chat-fab:active {
+  transform: scale(0.94);
+}
+
+/* The photo tiles are big: a smaller squeeze reads the same */
+.tile:active {
+  transform: scale(0.99);
+}
+
+.cell:not(:disabled):active {
+  background: var(--ocean-soft);
+}
+
+/* The lightbox arrows sit on top of a translateY(-50%); keep it while pressed */
+.lightbox .lb-prev:active,
+.lightbox .lb-next:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+.lightbox .lb-close:active {
+  transform: scale(0.94);
+}
+
+@media (max-width: 560px) {
+  .lightbox .lb-prev:active,
+  .lightbox .lb-next:active {
+    transform: scale(0.94);
+  }
+}
+
+/* Viewer opens with a quick fade + slight scale from the center (modals stay centered) */
+.lightbox[open] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+@starting-style {
+  .lightbox[open] {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* Buttons and caption clear the notch and the home indicator */
+.lightbox .lb-close {
+  top: calc(16px + env(safe-area-inset-top, 0px));
+}
+
+.lb-caption {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 560px) {
+  .lightbox .lb-prev,
+  .lightbox .lb-next {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Landscape phones: keep content out from under the notch */
+.page {
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
   }
 }
