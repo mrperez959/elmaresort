@@ -5,12 +5,33 @@ export type PublicDay = {
   available: boolean;
   /** cents, from the pricing rules in /admin */
   price: number;
+  /** price before a last-minute or gap discount, to show it crossed out */
+  regular?: number;
   minStay: number;
   closedForCheckin: boolean;
   closedForCheckout: boolean;
 };
 
 export type TaxLine = { name: string; percent: number };
+
+/** A date range priced up or down, e.g. Gasparilla +35%. `end` is the check-out day (exclusive). */
+export type SpecialDates = { start: string; end: string; label: string; percent: number };
+
+/** Automatic pricing that follows the season and fills empty nights. Money in cents. */
+export type SmartPricing = {
+  enabled: boolean;
+  /** 12 entries, January first: price of a weeknight and of a weekend night */
+  months: Array<{ weekday: number; weekend: number }>;
+  specials: SpecialDates[];
+  /** e.g. [{ days: 3, percent: 15 }]: nights still free within 3 days get 15% off */
+  lastMinute: Array<{ days: number; percent: number }>;
+  /** Short free gaps between bookings: discount, and allow booking exactly the gap */
+  gapFill: { enabled: boolean; maxNights: number; percent: number };
+  /** When the 2 weeks around a night are already mostly booked, raise it */
+  demand: { enabled: boolean; threshold: number; percent: number };
+  minPrice: number;
+  maxPrice: number;
+};
 
 /** All pricing and policy rules. Money in cents. */
 export type Settings = {
@@ -38,6 +59,7 @@ export type Settings = {
   taxes: TaxLine[] | null;
   maxNights: number;
   minNights: number;
+  smartPricing: SmartPricing;
   /** Export (.ics) links from Airbnb, Vrbo, etc. Their busy dates block the site. */
   icalUrls: string[];
   /** Overall rating shown on the site, copied from the platform listing. */
@@ -111,6 +133,8 @@ export type Quote = StayRequest & {
   weekdayRate: number;
   weekendRate: number;
   nightsSubtotal: number;
+  /** price of each night (smart pricing) */
+  nightly?: Array<{ date: string; price: number }>;
   lengthDiscount: { label: string; percent: number; amount: number } | null;
   directDiscount: { percent: number; amount: number } | null;
   promoDiscount: (AppliedPromo & { amount: number }) | null;

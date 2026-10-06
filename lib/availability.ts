@@ -3,6 +3,7 @@ import { getFeed, type Busy } from "./ical";
 import { getSettings } from "./settings";
 import { query } from "./db";
 import { addDays } from "./dates";
+import { gapMinStays } from "./smart-pricing";
 
 export type Replacing = { id: string; start: string; end: string };
 
@@ -68,6 +69,12 @@ export async function getDays(
       closedForCheckin: false,
       closedForCheckout: false,
     });
+  }
+  // Smart pricing gap fill: a 1-night hole between bookings can be booked for 1 night.
+  const gapStays = gapMinStays(days, settings);
+  for (const d of days) {
+    const g = gapStays.get(d.date);
+    if (g !== undefined) d.minStay = Math.min(d.minStay, g);
   }
   return days;
 }

@@ -72,7 +72,11 @@ export function Month({ year, month, dayMap, today, checkIn, checkOut, isSelecta
               onClick={() => onSelect(date)}
             >
               <span className="num">{Number(date.slice(8))}</span>
-              {!past && day?.available && <span className="price">{moneyShort(day.price)}</span>}
+              {!past && day?.available && (
+                <span className={`price${day.regular ? " deal" : ""}`} title={day.regular ? `${moneyShort(day.regular)} → ${moneyShort(day.price)}` : undefined}>
+                  {moneyShort(day.price)}
+                </span>
+              )}
             </button>
           );
         })}

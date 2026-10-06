@@ -2,6 +2,10 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { AdminLogin, AdminReviews, AdminSettings, CopyField, AdminCancel, AdminBlocks } from "@/components/Admin";
 import { query } from "@/lib/db";
+import { AdminSmartPricing } from "@/components/AdminSmartPricing";
+import { getDays } from "@/lib/availability";
+import { priceNights } from "@/lib/smart-pricing";
+import { addDays, todayAtProperty } from "@/lib/dates";
 import { listReviews } from "@/lib/reviews";
 import { exportToken } from "@/lib/calendar-export";
 import { SignOutButton } from "@/components/AuthPanel";
@@ -40,6 +44,16 @@ export default async function Admin() {
     process.env.VERCEL_PROJECT_PRODUCTION_URL ?? h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const exportUrl = `${proto}://${host}/calendar/${exportToken()}.ics`;
+
+  // Preview of the next 90 nights with the real calendar (skipped if calendars can't load).
+  const today = todayAtProperty();
+  const preview = await getDays(addDays(today, -14), addDays(today, 104))
+    .then((days) => {
+      const next = days.filter((d) => d.date >= today && d.date < addDays(today, 90));
+      const prices = priceNights(next.map((d) => d.date), days, settings, today);
+      return prices.map((p, i) => ({ ...p, booked: !next[i].available }));
+    })
+    .catch(() => null);
 
   return (
     <main className="page admin">
@@ -83,6 +97,8 @@ export default async function Admin() {
           Vrbo (Import/Export) instead; they re-read it every few hours. Keep this link private.
         </p>
       </section>
+
+      <AdminSmartPricing initial={settings.smartPricing} preview={preview} />
 
       <AdminSettings initial={settings} />
 

@@ -1,8 +1,9 @@
 import "server-only";
 import { getDays, type Day, type Replacing } from "./availability";
 import { getSettings } from "./settings";
-import { isISODate, nightsBetween, nightsOf, todayAtProperty } from "./dates";
-import { isWeekendNight, weekendRate } from "./pricing";
+import { addDays, isISODate, nightsBetween, nightsOf, todayAtProperty } from "./dates";
+import { isWeekendNight } from "./pricing";
+import { priceNights } from "./smart-pricing";
 import type { AppliedPromo, Quote, Settings, StayRequest } from "./types";
 import { validatePromo, PromoError, normalizeCode } from "./promos";
 
@@ -93,16 +94,23 @@ export function priceStay(
     throw new QuoteError("closed", "Check-out isn't available on that day. Try a different end date.");
   }
 
-  const wkRate = weekendRate(s);
+  const stayNights = nightsOf(stay.checkIn, stay.checkOut);
   let weekendNights = 0;
-  for (const date of nightsOf(stay.checkIn, stay.checkOut)) {
+  for (const date of stayNights) {
     if (!byDate.get(date)?.available) {
       throw new QuoteError("unavailable", "Some of those nights are already booked.");
     }
     if (isWeekendNight(date, s)) weekendNights++;
   }
   const weekdayNights = nights - weekendNights;
-  const nightsSubtotal = weekdayNights * s.baseNightly + weekendNights * wkRate;
+
+  // Each night priced on its own: season, special dates, demand, gap and last-minute rules.
+  const priced = priceNights(stayNights, days, s, today);
+  const nightly = priced.map((p) => ({ date: p.date, price: p.price }));
+  const nightsSubtotal = nightly.reduce((sum, n) => sum + n.price, 0);
+  const avg = (list: typeof nightly) => (list.length ? Math.round(list.reduce((a, n) => a + n.price, 0) / list.length) : 0);
+  const wkRate = avg(nightly.filter((n) => isWeekendNight(n.date, s)));
+  const baseRate = avg(nightly.filter((n) => !isWeekendNight(n.date, s)));
 
   // Longest-stay discount wins; they don't stack with each other.
   let lengthDiscount: Quote["lengthDiscount"] = null;
@@ -147,9 +155,10 @@ export function priceStay(
     currency: "USD",
     weekdayNights,
     weekendNights,
-    weekdayRate: s.baseNightly,
+    weekdayRate: baseRate,
     weekendRate: wkRate,
     nightsSubtotal,
+    nightly,
     lengthDiscount,
     directDiscount,
     promoDiscount,
@@ -193,8 +202,8 @@ export async function quoteStayWithPromo(
   if (nightsBetween(stay.checkIn, stay.checkOut) > s.maxNights) {
     throw new QuoteError("too_long", `Stays booked online can be up to ${s.maxNights} nights.`);
   }
-  // Include the check-out day so its closed-for-checkout flag can be read.
-  const days = await getDays(stay.checkIn, stay.checkOut, opts);
+  // Two weeks on each side, so smart pricing can see gaps and demand around the stay.
+  const days = await getDays(addDays(stay.checkIn, -14), addDays(stay.checkOut, 14), opts);
 
   let promo: AppliedPromo | null = opts.frozenPromo ?? null;
   let promoError: string | null = null;

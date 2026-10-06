@@ -10,13 +10,24 @@ type Row = { label: string; amount: number; kind?: "discount" | "tax" };
 function nightRows(q: Quote, lang: Lang): Row[] {
   const l = makeL(lang);
   const rows: Row[] = [];
-  if (q.weekdayNights) {
+  if (q.nightly?.length) {
+    // Group nights that cost the same: "$360.00 × 2 nights".
+    const groups: Array<{ price: number; count: number }> = [];
+    for (const n of q.nightly) {
+      const g = groups.find((x) => x.price === n.price);
+      if (g) g.count++;
+      else groups.push({ price: n.price, count: 1 });
+    }
+    for (const g of groups) {
+      rows.push({ label: `${money(g.price)} × ${g.count} ${nightsWord(lang, g.count)}`, amount: g.price * g.count });
+    }
+  } else if (q.weekdayNights) {
     rows.push({
       label: `${money(q.weekdayRate)} × ${q.weekdayNights} ${nightsWord(lang, q.weekdayNights)}`,
       amount: q.weekdayNights * q.weekdayRate,
     });
   }
-  if (q.weekendNights) {
+  if (!q.nightly?.length && q.weekendNights) {
     rows.push({
       label: l(
         `${money(q.weekendRate)} × ${q.weekendNights} weekend ${nightsWord(lang, q.weekendNights)}`,

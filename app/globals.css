@@ -2624,3 +2624,121 @@ a {
     gap: 12px;
   }
 }
+
+/* Nights discounted by smart pricing (last minute or gap between bookings). */
+.cell .price.deal {
+  color: #c4472f;
+  font-weight: 700;
+}
+
+.cell.start .price.deal,
+.cell.end .price.deal {
+  color: #ffd2c4;
+}
+
+/* ---------- Admin: smart pricing ---------- */
+
+.field-input.small {
+  display: inline-flex;
+  width: auto;
+  vertical-align: middle;
+}
+
+.field-input.small input {
+  width: 64px;
+  padding: 6px 6px;
+  font-size: 0.92rem;
+}
+
+.month-table {
+  max-width: 420px;
+}
+
+.month-table td,
+.month-table th {
+  padding: 4px 8px;
+}
+
+.month-table .field-input.small input {
+  width: 70px;
+}
+
+.special-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 150px 150px auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.special-row > input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.92rem;
+  min-width: 0;
+}
+
+.tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.tier {
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preview-months {
+  display: grid;
+  gap: 16px;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.pv {
+  display: grid;
+  text-align: center;
+  padding: 4px 2px;
+  border-radius: 4px;
+  background: var(--mist);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pv b {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.pv.deal {
+  background: var(--coral-soft);
+  color: #b2402a;
+  font-weight: 700;
+}
+
+.pv.up {
+  background: var(--ocean-soft);
+  color: var(--ocean);
+  font-weight: 700;
+}
+
+.pv.booked {
+  background: #e7e9ec;
+  color: #8a96a3;
+}
+
+@media (max-width: 700px) {
+  .special-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

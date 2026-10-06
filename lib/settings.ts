@@ -2,6 +2,8 @@ import "server-only";
 import { query } from "./db";
 import type { PublicSettings, Settings } from "./types";
 import { isPolicyId } from "./policy";
+import { DEFAULT_SMART } from "./smart-pricing";
+import type { SmartPricing } from "./types";
 
 /** Starting values. Everything here can be changed from /admin. */
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   approxArea: "Town 'n' Country, Tampa, FL",
   mapCenter: "",
   mapZoom: 15,
+  smartPricing: DEFAULT_SMART,
 };
 
 export class SettingsError extends Error {}
@@ -115,6 +118,79 @@ function url(v: unknown): string {
   } catch {
     throw new SettingsError("Review link must be a full https:// link.");
   }
+}
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function cents(v: unknown, label: string, min = 50, max = 5000): number {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < min * 100 || n > max * 100) {
+    throw new SettingsError(`${label} must be between $${min} and $${max}.`);
+  }
+  return Math.round(n);
+}
+
+function validateSmart(raw: unknown): SmartPricing {
+  if (!raw || typeof raw !== "object") return DEFAULT_SMART;
+  const r = raw as Record<string, unknown>;
+  const months = Array.isArray(r.months) ? r.months : [];
+  if (months.length !== 12) throw new SettingsError("Smart pricing needs a price for each of the 12 months.");
+  const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const specials = Array.isArray(r.specials) ? r.specials : [];
+  if (specials.length > 60) throw new SettingsError("Use at most 60 special dates.");
+  const tiers = Array.isArray(r.lastMinute) ? r.lastMinute : [];
+  if (tiers.length > 5) throw new SettingsError("Use at most 5 last-minute steps.");
+  const gap = (r.gapFill ?? {}) as Record<string, unknown>;
+  const demand = (r.demand ?? {}) as Record<string, unknown>;
+  const out: SmartPricing = {
+    enabled: Boolean(r.enabled),
+    months: months.map((mo, i) => {
+      const x = (mo ?? {}) as Record<string, unknown>;
+      return {
+        weekday: cents(x.weekday, `${names[i]} weeknight`),
+        weekend: cents(x.weekend, `${names[i]} weekend night`),
+      };
+    }),
+    specials: specials.map((sp) => {
+      const x = (sp ?? {}) as Record<string, unknown>;
+      const start = String(x.start ?? "");
+      const end = String(x.end ?? "");
+      const label = String(x.label ?? "").trim().slice(0, 60);
+      const percent = Number(x.percent);
+      if (!ISO.test(start) || !ISO.test(end) || end <= start) {
+        throw new SettingsError(`Special date "${label || start}": the end must be after the start.`);
+      }
+      if (!Number.isFinite(percent) || percent < -50 || percent > 200) {
+        throw new SettingsError(`Special date "${label || start}": use a change between -50% and +200%.`);
+      }
+      return { start, end, label: label || "Special", percent: Math.round(percent) };
+    }),
+    lastMinute: tiers
+      .map((t) => {
+        const x = (t ?? {}) as Record<string, unknown>;
+        const days = Math.round(Number(x.days));
+        const percent = Math.round(Number(x.percent));
+        if (!(days >= 0 && days <= 60) || !(percent >= 0 && percent <= 60)) {
+          throw new SettingsError("Last-minute steps: 0 to 60 days and 0 to 60%.");
+        }
+        return { days, percent };
+      })
+      .sort((a, b) => a.days - b.days),
+    gapFill: {
+      enabled: Boolean(gap.enabled),
+      maxNights: Math.min(6, Math.max(1, Math.round(Number(gap.maxNights) || 3))),
+      percent: Math.min(60, Math.max(0, Math.round(Number(gap.percent) || 0))),
+    },
+    demand: {
+      enabled: Boolean(demand.enabled),
+      threshold: Math.min(100, Math.max(30, Math.round(Number(demand.threshold) || 70))),
+      percent: Math.min(60, Math.max(0, Math.round(Number(demand.percent) || 0))),
+    },
+    minPrice: cents(r.minPrice, "Lowest nightly price"),
+    maxPrice: cents(r.maxPrice, "Highest nightly price"),
+  };
+  if (out.minPrice > out.maxPrice) throw new SettingsError("The lowest price can't be above the highest price.");
+  return out;
 }
 
 function email(v: unknown): string {
@@ -209,6 +285,7 @@ export function validateSettings(raw: unknown): Settings {
     approxArea: String(input.approxArea ?? "").trim().slice(0, 120) || DEFAULT_SETTINGS.approxArea,
     mapCenter: latLng(input.mapCenter),
     mapZoom: int(input, "mapZoom", 11, 16),
+    smartPricing: validateSmart(input.smartPricing),
   };
   if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {
