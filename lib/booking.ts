@@ -32,7 +32,7 @@ async function notify(guest: PublicUser, code: string, q: Quote) {
             `Total paid: ${usd(q.total)} (taxes ${usd(q.tax)})`,
             q.promoDiscount ? `Promo code: ${q.promoDiscount.code}` : "",
             "",
-            "Block these dates in Hospitable now if the calendar sync hasn't done it yet.",
+            "Airbnb and Vrbo pick this up from the calendar link within a few hours. If check-in is soon, block these dates on both now.",
           ]
             .filter((x, i, a) => x !== "" || a[i - 1] !== "")
             .join("\n"),

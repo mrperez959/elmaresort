@@ -39,64 +39,30 @@ function fold(line: string): string {
 }
 
 /**
- * iCalendar feed of confirmed direct bookings, for Hospitable (or Airbnb/Vrbo)
- * "import calendar". The link is secret; it carries the guest's name, party
- * size and contact so Hospitable shows who is coming. Airbnb/Vrbo ignore these
- * and only block the dates.
+ * iCalendar feed of confirmed direct bookings and owner blocks, imported by
+ * Airbnb and Vrbo. It only says which nights are taken: no guest names,
+ * phones or amounts leave the site. The booking code helps you find it in /admin.
  */
 export async function buildExportCalendar(): Promise<string> {
-  const rows = await query<{
-    code: string;
-    start: string;
-    end: string;
-    adults: number;
-    children: number;
-    infants: number;
-    pets: number;
-    total_cents: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-  }>(
-    `SELECT b.code, to_char(b.check_in, 'YYYY-MM-DD') AS start, to_char(b.check_out, 'YYYY-MM-DD') AS "end",
-            b.adults, b.children, b.infants, b.pets, b.total_cents, u.first_name, u.last_name, u.email, u.phone
-     FROM bookings b JOIN users u ON u.id = b.user_id
-     WHERE b.status = 'confirmed' AND b.check_out >= CURRENT_DATE - 30 ORDER BY b.check_in`,
+  const rows = await query<{ code: string; start: string; end: string }>(
+    `SELECT code, to_char(check_in, 'YYYY-MM-DD') AS start, to_char(check_out, 'YYYY-MM-DD') AS "end"
+     FROM bookings WHERE status = 'confirmed' AND check_out >= CURRENT_DATE - 30 ORDER BY check_in`,
   );
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const events = rows.map((r) => {
-    const guests = r.adults + r.children;
-    const party = [
-      `${guests} ${guests === 1 ? "guest" : "guests"}`,
-      r.infants ? `${r.infants} ${r.infants === 1 ? "infant" : "infants"}` : "",
-      r.pets ? `${r.pets} ${r.pets === 1 ? "pet" : "pets"}` : "",
-    ]
-      .filter(Boolean)
-      .join(", ");
-    const name = `${r.first_name} ${r.last_name}`;
-    const description = [
-      `Direct booking ${r.code}`,
-      `Guest: ${name}`,
-      `Party: ${r.adults} adults, ${r.children} children, ${r.infants} infants, ${r.pets} pets`,
-      `Phone: ${r.phone}`,
-      `Email: ${r.email}`,
-      `Paid: $${(r.total_cents / 100).toFixed(2)}`,
-    ].join("\n");
     return [
       "BEGIN:VEVENT",
       `UID:${r.code}@elmaresort`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${ics(r.start)}`,
       `DTEND;VALUE=DATE:${ics(r.end)}`,
-      `SUMMARY:${text(`${name} (${party}) ${r.code}`)}`,
-      `DESCRIPTION:${text(description)}`,
+      `SUMMARY:${text(`Reserved: direct booking ${r.code}`)}`,
       "STATUS:CONFIRMED",
       "TRANSP:OPAQUE",
       "END:VEVENT",
     ];
   });
-  // Owner blocks go out too, so Hospitable/Airbnb/Vrbo close those dates.
+  // Owner blocks go out too, so Airbnb and Vrbo close those dates.
   const blocks = await query<{ id: string; start: string; end: string; note: string }>(
     `SELECT id, to_char(start_date, 'YYYY-MM-DD') AS start, to_char(end_date, 'YYYY-MM-DD') AS "end", note
      FROM owner_blocks WHERE end_date >= CURRENT_DATE - 30`,
@@ -108,7 +74,7 @@ export async function buildExportCalendar(): Promise<string> {
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${ics(b.start)}`,
       `DTEND;VALUE=DATE:${ics(b.end)}`,
-      `SUMMARY:${text(b.note ? `Blocked: ${b.note}` : "Blocked by owner")}`,
+      "SUMMARY:Blocked by owner",
       "TRANSP:OPAQUE",
       "END:VEVENT",
     ]);

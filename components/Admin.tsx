@@ -226,9 +226,9 @@ export function AdminSettings({ initial }: { initial: Settings }) {
             }}
           />
           <span className="field-hint">
-            Best: the Hospitable export link (Properties → your property → Export calendar → Copy iCal link) plus
-            the Airbnb export link, which also carries dates you blocked by hand. Nights busy in any of them show as
-            booked here.
+            One link per line: the Airbnb export link (Availability → Connect calendars → Export calendar) and the
+            Vrbo one (Calendar → Import/Export → Export calendar). Nights busy in any of them show as booked here.
+            Calendars are re-read every 5 minutes, and always right before a guest pays.
           </span>
         </label>
         <Field label="Minimum stay" suffix="nights" value={form.minNights} onChange={set("minNights")} />
@@ -738,8 +738,8 @@ export function AdminBlocks({ blocks }: { blocks: Array<{ id: string; start: str
             </span>
           </label>
           <p className="field-hint wide">
-            Blocked dates close on this site right away and go out in the calendar link to Hospitable, which closes them
-            on Airbnb and Vrbo.
+            Blocked dates close on this site right away and go out in the calendar link that Airbnb and Vrbo import
+            (they re-read it every few hours).
           </p>
           {error && (
             <p className="notice error wide" role="alert">

@@ -37,9 +37,14 @@ export async function runChecks(): Promise<Check[]> {
     }
   }
   const labels = settings.icalUrls.map(feedLabel);
-  // A Hospitable export already contains the Airbnb and Vrbo reservations.
-  const viaHospitable = labels.includes("Hospitable");
-  for (const needed of viaHospitable ? [] : ["Airbnb", "Vrbo"]) {
+  if (labels.includes("Hospitable")) {
+    checks.push({
+      name: "Hospitable",
+      status: "warn",
+      message: "A Hospitable calendar link is still listed. Remove it once the Airbnb and Vrbo links are added, or it will fail when Hospitable is cancelled.",
+    });
+  }
+  for (const needed of ["Airbnb", "Vrbo"]) {
     if (settings.icalUrls.length && !labels.includes(needed)) {
       checks.push({
         name: needed,

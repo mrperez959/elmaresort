@@ -86,16 +86,29 @@ export default async function Admin() {
       </section>
 
       <section className="export-box" aria-labelledby="export-heading">
-        <h2 id="export-heading" className="admin-section first">Send direct bookings to Hospitable</h2>
+        <h2 id="export-heading" className="admin-section first">Send direct bookings to Airbnb and Vrbo</h2>
         <p>
-          In Hospitable, open your property and under Imported iCal click Add External iCal, then paste this link.
-          Hospitable reads it about every 20 minutes and blocks the dates on Airbnb and Vrbo for you.
+          Paste this link in both platforms so they close the dates booked here and the dates you block below:
         </p>
         <CopyField value={exportUrl} />
-        <p className="field-hint">
-          If your plan doesn&apos;t allow iCal imports, paste it directly in Airbnb (Availability → Connect calendars) and
-          Vrbo (Import/Export) instead; they re-read it every few hours. Keep this link private.
-        </p>
+        <ul className="field-hint">
+          <li>
+            <strong>Airbnb:</strong> Listings → your listing → Availability → Connect calendars → Connect another
+            website → paste the link, name it &quot;Elma Resort website&quot;.
+          </li>
+          <li>
+            <strong>Vrbo:</strong> Calendar → Import/Export → Import calendar → paste the link, name it &quot;Elma
+            Resort website&quot;.
+          </li>
+          <li>
+            Also connect Airbnb and Vrbo to each other (Airbnb&apos;s export link into Vrbo, and Vrbo&apos;s into Airbnb),
+            so a booking on one closes the other.
+          </li>
+          <li>
+            Airbnb and Vrbo re-read imported calendars every few hours, not instantly. You get an email with every
+            direct booking: for bookings starting soon, block the dates on both platforms by hand.
+          </li>
+        </ul>
       </section>
 
       <AdminSmartPricing initial={settings.smartPricing} preview={preview} />

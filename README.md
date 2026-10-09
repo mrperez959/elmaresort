@@ -275,3 +275,11 @@ npm run dev
 | `lib/settings.ts` | Configuración de `/admin` |
 | `lib/auth.ts`, `lib/users.ts` | Cuentas, sesiones y reservas guardadas |
 | `components/Admin.tsx` | Panel de admin |
+
+## Calendarios: conexión directa con Airbnb y Vrbo (sin Hospitable)
+
+- **Airbnb y Vrbo → web:** en `/admin` → Calendars, pega el enlace de exportación de Airbnb y el de Vrbo, uno por línea. La web los lee cada 5 minutos y siempre justo antes de cobrar.
+- **Web → Airbnb y Vrbo:** copia el enlace de `/admin` (*Send direct bookings to Airbnb and Vrbo*) y pégalo en Airbnb (Availability → Connect calendars) y en Vrbo (Import/Export → Import calendar).
+- **Airbnb ↔ Vrbo:** conecta también cada plataforma con la otra usando sus enlaces de exportación.
+- El enlace de la web solo dice qué noches están ocupadas, sin nombres, teléfonos ni montos.
+- Airbnb y Vrbo releen los calendarios importados cada pocas horas. Para reservas directas con llegada cercana, bloquea las fechas a mano en ambas (te llega un email con cada reserva).

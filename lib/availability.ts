@@ -53,7 +53,7 @@ export async function getDays(
     directBookings(replacing?.id),
     ownerBlocks(),
   ]);
-  // Airbnb/Hospitable re-publish our own direct bookings (we export them), so
+  // Airbnb/Vrbo re-publish our own direct bookings (we export them), so
   // when a guest changes their trip, ignore the span that is exactly their current stay.
   const external = feeds
     .flatMap((f) => f.busy)
