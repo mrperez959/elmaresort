@@ -69,6 +69,7 @@ export default async function Home() {
     containsPlace: { "@type": "Accommodation", occupancy: { "@type": "QuantitativeValue", maxValue: settings.maxGuests } },
     amenityFeature: HOUSE_AMENITIES.map((a) => ({ "@type": "LocationFeatureSpecification", name: a.title, value: true })),
     petsAllowed: settings.maxPets > 0,
+    sameAs: [settings.instagramUrl, settings.facebookUrl].filter(Boolean),
     ...(settings.reviewsAverage !== null && settings.reviewsCount
       ? { aggregateRating: { "@type": "AggregateRating", ratingValue: settings.reviewsAverage, reviewCount: settings.reviewsCount, bestRating: 5 } }
       : {}),

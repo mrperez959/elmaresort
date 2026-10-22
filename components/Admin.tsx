@@ -115,6 +115,8 @@ function fromForm(f: Form): Record<string, unknown> {
         "contactWhatsApp",
         "contactPhone",
         "contactEmail",
+        "instagramUrl",
+        "facebookUrl",
         "propertyAddress",
         "checkInInstructions",
         "checkInInstructionsEs",
@@ -490,6 +492,23 @@ export function AdminSettings({ initial }: { initial: Settings }) {
           </span>
         </label>
         <p className="field-hint wide">The floating chat button appears on the site once at least one of these is filled in.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Social media</legend>
+        <label className="field wide-field">
+          <span className="field-label">Instagram</span>
+          <span className="field-input">
+            <input value={form.instagramUrl} placeholder="https://www.instagram.com/elmaresort" onChange={(e) => set("instagramUrl")(e.target.value)} />
+          </span>
+        </label>
+        <label className="field wide-field">
+          <span className="field-label">Facebook page</span>
+          <span className="field-input">
+            <input value={form.facebookUrl} placeholder="https://www.facebook.com/elmaresort" onChange={(e) => set("facebookUrl")(e.target.value)} />
+          </span>
+          <span className="field-hint">Shown as icons in the footer. Leave empty to hide one.</span>
+        </label>
       </fieldset>
 
       <fieldset>

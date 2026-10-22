@@ -74,6 +74,9 @@ export type Settings = {
   contactWhatsApp: string;
   contactPhone: string;
   contactEmail: string;
+  /** Social profiles shown in the footer. Empty = hidden. */
+  instagramUrl: string;
+  facebookUrl: string;
   /** PRIVATE: shown only to the guest, on their trip page, from check-in day */
   propertyAddress: string;
   /**

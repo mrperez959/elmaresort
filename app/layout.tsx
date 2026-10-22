@@ -51,7 +51,13 @@ export const viewport: Viewport = {
 async function contact() {
   try {
     const s = await getSettings();
-    return { whatsapp: s.contactWhatsApp, phone: s.contactPhone, email: s.contactEmail };
+    return {
+      whatsapp: s.contactWhatsApp,
+      phone: s.contactPhone,
+      email: s.contactEmail,
+      instagram: s.instagramUrl,
+      facebook: s.facebookUrl,
+    };
   } catch {
     return null; // database not configured yet: no chat button
   }
@@ -64,7 +70,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <LangProvider lang={lang}>
         {children}
-        <SiteFooter name={name} email={c?.email ?? ""} phone={c?.phone ?? ""} whatsapp={c?.whatsapp ?? ""} />
+        <SiteFooter
+          name={name}
+          email={c?.email ?? ""}
+          phone={c?.phone ?? ""}
+          whatsapp={c?.whatsapp ?? ""}
+          instagram={c?.instagram ?? ""}
+          facebook={c?.facebook ?? ""}
+        />
         <Analytics />
         <Reveal />
         <GoogleAds />

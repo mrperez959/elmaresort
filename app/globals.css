@@ -3067,3 +3067,34 @@ html {
     animation: none;
   }
 }
+
+/* ---------- Social links (footer) ---------- */
+
+.social {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.social a {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  transition:
+    background-color 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.social a:active {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .social a:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}

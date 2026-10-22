@@ -33,6 +33,8 @@ export const DEFAULT_SETTINGS: Settings = {
   contactWhatsApp: "",
   contactPhone: "",
   contactEmail: "",
+  instagramUrl: "https://www.instagram.com/elmaresort",
+  facebookUrl: "https://www.facebook.com/1394217147102258",
   propertyAddress: "",
   checkInInstructions: "",
   checkInInstructionsEs: "",
@@ -117,6 +119,21 @@ function url(v: unknown): string {
     return u.toString().slice(0, 500);
   } catch {
     throw new SettingsError("Review link must be a full https:// link.");
+  }
+}
+
+/** A profile link on the given site. "@name" is accepted for Instagram. */
+function social(v: unknown, host: string, label: string): string {
+  let raw = String(v ?? "").trim();
+  if (!raw) return "";
+  if (raw.startsWith("@")) raw = `https://www.${host}/${raw.slice(1)}`;
+  else if (!/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" || !(u.hostname === host || u.hostname.endsWith(`.${host}`))) throw new Error();
+    return u.toString().replace(/\/$/, "").slice(0, 300);
+  } catch {
+    throw new SettingsError(`${label}: paste the full link to your ${label} page (https://www.${host}/...).`);
   }
 }
 
@@ -276,6 +293,8 @@ export function validateSettings(raw: unknown): Settings {
     contactWhatsApp: phone(input.contactWhatsApp, "WhatsApp number"),
     contactPhone: phone(input.contactPhone, "Phone number"),
     contactEmail: email(input.contactEmail),
+    instagramUrl: social(input.instagramUrl, "instagram.com", "Instagram"),
+    facebookUrl: social(input.facebookUrl, "facebook.com", "Facebook"),
     propertyAddress: String(input.propertyAddress ?? "").trim().slice(0, 300),
     checkInInstructions: String(input.checkInInstructions ?? "").trim().slice(0, 6000),
     checkInInstructionsEs: String(input.checkInInstructionsEs ?? "").trim().slice(0, 6000),
