@@ -9,7 +9,7 @@ type Props = { name: string; email: string; phone: string; whatsapp: string };
 export function SiteFooter({ name, email, phone, whatsapp }: Props) {
   const { l } = useL();
   if (usePathname()?.startsWith("/admin")) return null;
-  const tel = phone || whatsapp;
+  const tel = phone;
   return (
     <footer className="site-footer">
       <div className="footer-inner">

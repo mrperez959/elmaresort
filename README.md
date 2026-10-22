@@ -283,3 +283,10 @@ npm run dev
 - **Airbnb ↔ Vrbo:** conecta también cada plataforma con la otra usando sus enlaces de exportación.
 - El enlace de la web solo dice qué noches están ocupadas, sin nombres, teléfonos ni montos.
 - Airbnb y Vrbo releen los calendarios importados cada pocas horas. Para reservas directas con llegada cercana, bloquea las fechas a mano en ambas (te llega un email con cada reserva).
+
+## Google Ads
+
+- **Variables (Vercel):** `NEXT_PUBLIC_GOOGLE_ADS_ID` (AW-…), `NEXT_PUBLIC_GOOGLE_ADS_BOOKING_LABEL` y, opcional, `NEXT_PUBLIC_GOOGLE_ADS_CHECKOUT_LABEL`. Sin ellas la etiqueta no se carga.
+- **Conversiones:** cada reserva se envía con su monto real en USD y el código de reserva (para no contarla dos veces). "Continuar al pago" puede ir como conversión secundaria.
+- **Dónde no carga:** la etiqueta nunca se carga en `/admin`.
+- **En Analytics:** las visitas que llegan de un anuncio (con `gclid`) aparecen como `google / cpc` aunque el anuncio no tenga UTM.

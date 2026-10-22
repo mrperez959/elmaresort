@@ -152,13 +152,16 @@ export function privacyPolicy(lang: Lang, propertyName: string, contactEmail: st
       { h: "Qué datos guardamos", p: [
         "Tu nombre, email, teléfono y contraseña (cifrada) cuando creas una cuenta.",
         "Tus reservas: fechas, huéspedes, precio, la aceptación de las reglas y del contrato (con fecha, hora y la dirección IP de ese momento).",
-        "Estadísticas de uso del sitio: páginas vistas, tiempo y la región aproximada de tu conexión. No guardamos direcciones IP para estadísticas ni usamos cookies de publicidad.",
+        "Estadísticas de uso del sitio: páginas vistas, tiempo y la región aproximada de tu conexión. No guardamos direcciones IP para estadísticas.",
       ] },
       { h: "Pagos", p: ["Los datos de tu tarjeta los procesa Square y nunca pasan por nuestros servidores ni los guardamos."] },
       { h: "Con quién los compartimos", p: [
         "Con Square (pagos), nuestro proveedor de email (para enviarte códigos y confirmaciones) y nuestro sistema de gestión de reservas, que recibe tu nombre, contacto y fechas para organizar tu estadía. No vendemos tus datos.",
       ] },
-      { h: "Cookies", p: ["Usamos solo las cookies necesarias para mantener tu sesión y tu idioma, y un identificador anónimo en tu navegador para las estadísticas."] },
+      { h: "Cookies", p: [
+        "Usamos las cookies necesarias para mantener tu sesión y tu idioma, y un identificador anónimo en tu navegador para las estadísticas.",
+        "Si llegas desde un anuncio, usamos la etiqueta de Google Ads para saber si ese anuncio terminó en una reserva. Google trata esos datos según su propia política (policies.google.com/privacy). Puedes desactivar los anuncios personalizados en adssettings.google.com.",
+      ] },
       { h: "Cuánto tiempo", p: ["Las estadísticas se borran después de unos 13 meses. Los datos de reservas se guardan el tiempo que exige la ley fiscal."] },
       { h: "Tus derechos", p: [`Puedes pedirnos una copia de tus datos o que borremos tu cuenta escribiendo a ${contact}.`] },
       { h: "Quiénes somos", p: [`${propertyName}, alquiler vacacional en Tampa, Florida.`] },
@@ -168,13 +171,16 @@ export function privacyPolicy(lang: Lang, propertyName: string, contactEmail: st
     { h: "What we collect", p: [
       "Your name, email, phone and password (encrypted) when you create an account.",
       "Your bookings: dates, guests, price, and your acceptance of the house rules and rental agreement (with the date, time and IP address at that moment).",
-      "Site usage statistics: pages viewed, time on site and the approximate region of your connection. We don't store IP addresses for statistics or use advertising cookies.",
+      "Site usage statistics: pages viewed, time on site and the approximate region of your connection. We don't store IP addresses for statistics.",
     ] },
     { h: "Payments", p: ["Your card details are processed by Square and never pass through or stay on our servers."] },
     { h: "Who we share it with", p: [
       "Square (payments), our email provider (to send you codes and confirmations) and our booking management system, which receives your name, contact details and dates to organize your stay. We don't sell your data.",
     ] },
-    { h: "Cookies", p: ["We only use the cookies needed to keep you signed in and remember your language, plus an anonymous ID in your browser for statistics."] },
+    { h: "Cookies", p: [
+      "We use the cookies needed to keep you signed in and remember your language, plus an anonymous ID in your browser for statistics.",
+      "If you arrive from an ad, we use the Google Ads tag to know whether that ad led to a booking. Google handles that data under its own policy (policies.google.com/privacy). You can turn off personalized ads at adssettings.google.com.",
+    ] },
     { h: "How long", p: ["Statistics are deleted after about 13 months. Booking records are kept as long as tax law requires."] },
     { h: "Your rights", p: [`You can ask for a copy of your data or for your account to be deleted by writing to ${contact}.`] },
     { h: "Who we are", p: [`${propertyName}, a vacation rental in Tampa, Florida.`] },

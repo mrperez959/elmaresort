@@ -4,6 +4,7 @@ import { display, body } from "./fonts";
 import { ChatButton } from "@/components/ChatButton";
 import { Analytics } from "@/components/Analytics";
 import { Reveal } from "@/components/Reveal";
+import { GoogleAds } from "@/components/GoogleAds";
 import { LangProvider } from "@/components/LangProvider";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getLang } from "@/lib/lang-server";
@@ -66,6 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SiteFooter name={name} email={c?.email ?? ""} phone={c?.phone ?? ""} whatsapp={c?.whatsapp ?? ""} />
         <Analytics />
         <Reveal />
+        <GoogleAds />
         {c && (c.whatsapp || c.phone || c.email) && <ChatButton {...c} propertyName={name} />}
         </LangProvider>
       </body>

@@ -54,6 +54,21 @@ export async function runChecks(): Promise<Check[]> {
     }
   }
 
+  // Google Ads
+  {
+    const id = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ?? "";
+    const label = process.env.NEXT_PUBLIC_GOOGLE_ADS_BOOKING_LABEL ?? "";
+    checks.push(
+      !id
+        ? { name: "Google Ads", status: "warn", message: "Not set up. Add NEXT_PUBLIC_GOOGLE_ADS_ID and NEXT_PUBLIC_GOOGLE_ADS_BOOKING_LABEL before running ads." }
+        : !/^AW-\d+$/.test(id)
+          ? { name: "Google Ads", status: "error", message: `NEXT_PUBLIC_GOOGLE_ADS_ID should look like AW-123456789 (it is "${id}").` }
+          : !label
+            ? { name: "Google Ads", status: "warn", message: `Tag ${id} is on the site, but NEXT_PUBLIC_GOOGLE_ADS_BOOKING_LABEL is missing, so bookings aren't reported.` }
+            : { name: "Google Ads", status: "ok", message: `Tag ${id} is on the site; every booking is reported with its amount.` },
+    );
+  }
+
   // Square
   const sq = ["SQUARE_ACCESS_TOKEN", "NEXT_PUBLIC_SQUARE_APPLICATION_ID", "NEXT_PUBLIC_SQUARE_LOCATION_ID"].filter(
     (k) => !process.env[k],

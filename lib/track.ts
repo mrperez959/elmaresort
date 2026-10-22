@@ -54,13 +54,38 @@ function ids(): { v: string; s: string; isNew: boolean } {
 function context(): Record<string, string> {
   const url = new URL(window.location.href);
   const ref = document.referrer ? new URL(document.referrer) : null;
+  // A Google Ads click carries ?gclid=… : count it as google / cpc when the ad has no UTM tags.
+  const fromAds = url.searchParams.has("gclid") || url.searchParams.has("gbraid") || url.searchParams.has("wbraid");
   return {
     landing: url.pathname,
     referrer: ref && ref.host !== url.host ? ref.host : "",
-    utm_source: url.searchParams.get("utm_source") ?? "",
-    utm_medium: url.searchParams.get("utm_medium") ?? "",
+    utm_source: url.searchParams.get("utm_source") ?? (fromAds ? "google" : ""),
+    utm_medium: url.searchParams.get("utm_medium") ?? (fromAds ? "cpc" : ""),
     utm_campaign: url.searchParams.get("utm_campaign") ?? "",
   };
+}
+
+// ---------- Google Ads conversions ----------
+
+type Gtag = (...args: unknown[]) => void;
+
+const ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ?? "";
+const ADS_LABELS: Partial<Record<TrackType, string>> = {
+  booking: process.env.NEXT_PUBLIC_GOOGLE_ADS_BOOKING_LABEL ?? "",
+  checkout_start: process.env.NEXT_PUBLIC_GOOGLE_ADS_CHECKOUT_LABEL ?? "",
+};
+
+/** Report a conversion to Google Ads (booking: with its real amount, de-duplicated by code). */
+function adsConversion(t: TrackType, data: Omit<Event, "t">) {
+  const label = ADS_LABELS[t];
+  const gtag = (window as unknown as { gtag?: Gtag }).gtag;
+  if (!ADS_ID || !label || !gtag) return;
+  gtag("event", "conversion", {
+    send_to: `${ADS_ID}/${label}`,
+    ...(t === "booking"
+      ? { value: (data.n ?? 0) / 100, currency: "USD", transaction_id: data.l ?? "" }
+      : {}),
+  });
 }
 
 let pendingContext: Record<string, string> | null = null;
@@ -85,6 +110,7 @@ export function track(t: TrackType, data: Omit<Event, "t"> = {}) {
   if (typeof window === "undefined") return;
   if (/bot|crawl|spider|headless|lighthouse/i.test(navigator.userAgent)) return;
   queue.push({ t, p: window.location.pathname, ...data });
+  adsConversion(t, data);
   if (!timer) timer = setTimeout(flush, 1500);
 }
 
