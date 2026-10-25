@@ -55,6 +55,13 @@ function nightRows(q: Quote, lang: Lang): Row[] {
       kind: "discount",
     });
   }
+  if (q.pointsDiscount && q.pointsDiscount.amount > 0) {
+    rows.push({
+      label: l(`Elma Points (${q.pointsDiscount.points.toLocaleString()})`, `Elma Points (${q.pointsDiscount.points.toLocaleString()})`),
+      amount: -q.pointsDiscount.amount,
+      kind: "discount",
+    });
+  }
   if (q.cleaningFee) rows.push({ label: l("Cleaning fee", "Tarifa de limpieza"), amount: q.cleaningFee });
   if (q.petFee) rows.push({ label: l(`Pet fee (${q.pets} ${petsWord(lang, q.pets)})`, `Tarifa de mascota (${q.pets} ${petsWord(lang, q.pets)})`), amount: q.petFee });
   return rows;

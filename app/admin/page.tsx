@@ -66,6 +66,9 @@ export default async function Admin() {
           <Link href="/admin/promos" className="manage-link">
             Influencer codes →
           </Link>
+          <Link href="/admin/points" className="manage-link">
+            Elma Points →
+          </Link>
           <Link href="/admin/reports" className="manage-link">
             Reports →
           </Link>

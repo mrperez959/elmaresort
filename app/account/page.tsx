@@ -7,6 +7,9 @@ import { todayAtProperty } from "@/lib/dates";
 import { longDate, money } from "@/lib/format";
 import { getL } from "@/lib/lang-server";
 import { guestsWord, petsWord } from "@/lib/i18n";
+import { PointsPanel } from "@/components/PointsPanel";
+import { canEarn, getBalance, userHistory, userPosts } from "@/lib/points";
+import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your trips" };
@@ -39,7 +42,11 @@ export default async function Account() {
     );
   }
 
-  const bookings = await bookingsForUser(user.id);
+  const [bookings, settings] = await Promise.all([bookingsForUser(user.id), getSettings()]);
+  const loyalty = settings.loyalty;
+  const points = loyalty.enabled
+    ? await Promise.all([getBalance(user.id), canEarn(user.id), userPosts(user.id), userHistory(user.id)])
+    : null;
   const today = todayAtProperty();
   const upcoming = bookings.filter((b) => b.checkOut >= today && b.status === "confirmed").reverse();
   const past = bookings.filter((b) => b.checkOut < today || b.status !== "confirmed");
@@ -97,6 +104,22 @@ export default async function Account() {
             <h3>{l("Past and cancelled", "Pasados y cancelados")}</h3>
             {list(past)}
           </>
+        )}
+
+        {points && (
+          <PointsPanel
+            available={points[0].available}
+            nextExpiry={points[0].nextExpiry}
+            canEarn={points[1]}
+            posts={points[2]}
+            history={points[3]}
+            rules={{
+              centsPerPoint: loyalty.centsPerPoint,
+              pointsPerLike: loyalty.pointsPerLike,
+              pointsPerComment: loyalty.pointsPerComment,
+              transferMin: loyalty.transferMin,
+            }}
+          />
         )}
       </section>
     </main>

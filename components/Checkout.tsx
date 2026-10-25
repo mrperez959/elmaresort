@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { SquareCard, type SquareCardHandle } from "./SquareCard";
 import { AuthPanel, VerifyEmail } from "./AuthPanel";
@@ -12,9 +12,25 @@ import { guestsWord, infantsWord, petsWord } from "@/lib/i18n";
 import { track } from "@/lib/track";
 import { policyName, policyDeadlines, zonedInstant, graceNote, feesNote, type PolicyId } from "@/lib/policy";
 
-type Props = { stay: StayRequest; user: PublicUser | null; policy: PolicyId; checkInHour: number };
+type Props = {
+  stay: StayRequest;
+  user: PublicUser | null;
+  policy: PolicyId;
+  checkInHour: number;
+  /** Elma Points the signed-in guest can use (0 hides the option) */
+  pointsAvailable: number;
+  centsPerPoint: number;
+  maxDiscountPercent: number;
+};
 
-export function Checkout({ stay, user, policy, checkInHour }: Props) {
+export function Checkout(props: Props) {
+  const { user, policy, checkInHour, pointsAvailable, centsPerPoint, maxDiscountPercent } = props;
+  const [usePoints, setUsePoints] = useState(false);
+  // The stay as priced and paid: with the guest's points when they choose to use them.
+  const stay = useMemo(
+    () => ({ ...props.stay, points: usePoints && pointsAvailable > 0 ? pointsAvailable : undefined }),
+    [props.stay, usePoints, pointsAvailable],
+  );
   const { lang, l, msg } = useL();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -55,7 +71,7 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
           fetch("/api/checkout-intent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...stay, promo: body.quote.promoDiscount?.code, total: body.quote.total }),
+            body: JSON.stringify({ ...stay, points: undefined, promo: body.quote.promoDiscount?.code, total: body.quote.total }),
           }).catch(() => undefined);
         }
       })
@@ -228,6 +244,29 @@ export function Checkout({ stay, user, policy, checkInHour }: Props) {
               <br />
               {user.email}
             </p>
+
+            {pointsAvailable > 0 && (
+              <label className="use-points">
+                <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+                <span>
+                  <strong>
+                    {l("Use my Elma Points", "Usar mis Elma Points")} ({pointsAvailable.toLocaleString()} ={" "}
+                    {money(pointsAvailable * centsPerPoint)})
+                  </strong>
+                  <small>
+                    {quote?.pointsDiscount
+                      ? l(
+                          `Using ${quote.pointsDiscount.points.toLocaleString()} points: −${money(quote.pointsDiscount.amount)}`,
+                          `Usando ${quote.pointsDiscount.points.toLocaleString()} puntos: −${money(quote.pointsDiscount.amount)}`,
+                        )
+                      : l(
+                          `Points can pay up to ${maxDiscountPercent}% of the nights.`,
+                          `Los puntos pueden pagar hasta el ${maxDiscountPercent}% de las noches.`,
+                        )}
+                  </small>
+                </span>
+              </label>
+            )}
 
             <label className="agree">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />

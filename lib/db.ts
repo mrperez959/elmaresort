@@ -171,6 +171,37 @@ CREATE TABLE IF NOT EXISTS promo_payouts (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- Elma Points. Every change to a balance is one ledger row (never edited, except
+-- a pending checkout reservation that is deleted if the payment fails).
+--   kind: earn | transfer_in | restore | adjust (+)   redeem | transfer_out | adjust (-)
+CREATE TABLE IF NOT EXISTS points_ledger (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES users(id),
+  delta       int NOT NULL CHECK (delta <> 0),
+  kind        text NOT NULL,
+  ref         text NOT NULL DEFAULT '',
+  note        text NOT NULL DEFAULT '',
+  expires_on  date,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS points_ledger_user ON points_ledger (user_id, created_at);
+CREATE INDEX IF NOT EXISTS points_ledger_ref ON points_ledger (ref);
+
+-- Instagram posts sent by guests for points.
+CREATE TABLE IF NOT EXISTS social_posts (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      uuid NOT NULL REFERENCES users(id),
+  url          text NOT NULL UNIQUE,
+  status       text NOT NULL DEFAULT 'pending',
+  likes        int,
+  comments     int,
+  points       int,
+  admin_note   text NOT NULL DEFAULT '',
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  reviewed_at  timestamptz
+);
+CREATE INDEX IF NOT EXISTS social_posts_status ON social_posts (status, created_at);
+
 -- First-party analytics. No IP addresses are stored.
 CREATE TABLE IF NOT EXISTS visits (
   id            uuid PRIMARY KEY,
@@ -225,6 +256,27 @@ function ensureSchema(): Promise<void> {
       });
   }
   return globalForDb.__elmaSchema;
+}
+
+/** Runs `fn` in one database transaction (BEGIN … COMMIT, ROLLBACK on error). */
+export async function transaction<R>(
+  fn: (q: <T extends QueryResultRow>(text: string, params?: unknown[]) => Promise<T[]>) => Promise<R>,
+): Promise<R> {
+  await ensureSchema();
+  const client = await pool().connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(async <T extends QueryResultRow>(text: string, params: unknown[] = []) =>
+      (await client.query<T>(text, params)).rows,
+    );
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function query<T extends QueryResultRow>(text: string, params: unknown[] = []): Promise<T[]> {

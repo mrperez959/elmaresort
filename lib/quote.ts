@@ -3,6 +3,7 @@ import { getDays, type Day, type Replacing } from "./availability";
 import { getSettings } from "./settings";
 import { addDays, isISODate, nightsBetween, nightsOf, todayAtProperty } from "./dates";
 import { isWeekendNight } from "./pricing";
+import { pointsDiscount as pointsDiscountFor } from "./points-math";
 import { priceNights } from "./smart-pricing";
 import type { AppliedPromo, Quote, Settings, StayRequest } from "./types";
 import { validatePromo, PromoError, normalizeCode } from "./promos";
@@ -41,6 +42,7 @@ export function parseStayRequest(body: unknown): StayRequest {
     infants: toCount(b.infants),
     pets: toCount(b.pets),
     promo: typeof b.promo === "string" && b.promo.trim() ? normalizeCode(b.promo).slice(0, 24) : undefined,
+    points: Math.max(0, Math.min(1_000_000, Math.floor(Number(b.points) || 0))) || undefined,
   };
   if (!isISODate(stay.checkIn) || !isISODate(stay.checkOut)) {
     throw new QuoteError("invalid", "Choose a check-in and a check-out date.");
@@ -60,6 +62,8 @@ export function priceStay(
   s: Settings,
   today: string,
   promo: AppliedPromo | null = null,
+  /** Elma Points to use, already capped to the guest's balance by the caller */
+  points = 0,
 ): Quote {
   if (s.taxes === null) {
     throw new QuoteError("not_ready", "Online booking isn't open yet. Please check back soon.");
@@ -141,7 +145,12 @@ export function priceStay(
   const promoDiscount =
     promo && promo.percent > 0 ? { ...promo, amount: pct(afterDirect, promo.percent) } : promo ? { ...promo, amount: 0 } : null;
 
-  const accommodation = afterDirect - (promoDiscount?.amount ?? 0);
+  const afterPromo = afterDirect - (promoDiscount?.amount ?? 0);
+
+  // Elma Points: last, capped at the configured % of the nights.
+  const pointsUsed = s.loyalty.enabled ? pointsDiscountFor(points, afterPromo, s.loyalty) : null;
+
+  const accommodation = afterPromo - (pointsUsed?.amount ?? 0);
   const cleaningFee = s.cleaningFee;
   const petFee = stay.pets > 0 ? s.petFee : 0;
   const subtotal = accommodation + cleaningFee + petFee;
@@ -162,6 +171,7 @@ export function priceStay(
     lengthDiscount,
     directDiscount,
     promoDiscount,
+    pointsDiscount: pointsUsed,
     accommodation,
     cleaningFee,
     petFee,
@@ -180,7 +190,7 @@ export function priceStay(
  */
 export async function quoteStay(
   stay: StayRequest,
-  opts: { forBooking?: boolean; replacing?: Replacing; frozenPromo?: AppliedPromo | null } = {},
+  opts: { forBooking?: boolean; replacing?: Replacing; frozenPromo?: AppliedPromo | null; maxPoints?: number } = {},
 ): Promise<Quote> {
   return (await quoteStayWithPromo(stay, { ...opts, promoMode: "strict" })).quote;
 }
@@ -192,6 +202,8 @@ export async function quoteStayWithPromo(
     replacing?: Replacing;
     frozenPromo?: AppliedPromo | null;
     promoMode?: "strict" | "soft";
+    /** the guest's available points (stay.points is capped to this); 0 or missing = no points */
+    maxPoints?: number;
   } = {},
 ): Promise<{ quote: Quote; promoError: string | null }> {
   const s = await getSettings();
@@ -216,6 +228,7 @@ export async function quoteStayWithPromo(
       promoError = err.message;
     }
   }
-  const quote = priceStay({ ...stay, promo: promo?.code }, days, s, todayAtProperty(), promo);
+  const points = Math.min(stay.points ?? 0, opts.maxPoints ?? 0);
+  const quote = priceStay({ ...stay, promo: promo?.code, points: points || undefined }, days, s, todayAtProperty(), promo, points);
   return { quote, promoError };
 }

@@ -118,6 +118,18 @@ const EXACT: Record<string, string> = {
   "Something went wrong. Try again.": "Algo falló. Inténtalo de nuevo.",
   "Unsupported request.": "Solicitud no válida.",
   "Invalid request.": "Solicitud no válida.",
+  "Your points balance just changed. Review the total and pay again.": "Tu saldo de puntos acaba de cambiar. Revisa el total y paga de nuevo.",
+  "Elma Points are paused right now.": "Los Elma Points están pausados por ahora.",
+  "You can earn points once your stay at Elma Resort has started.": "Puedes ganar puntos cuando haya empezado tu estadía en Elma Resort.",
+  "Paste the link to an Instagram post or reel (instagram.com/p/… or /reel/…).": "Pega el enlace de una publicación o reel de Instagram (instagram.com/p/… o /reel/…).",
+  "You already have 3 posts waiting for review. We'll get to them soon.": "Ya tienes 3 publicaciones esperando revisión. Las revisaremos pronto.",
+  "You can send up to 10 posts every 30 days.": "Puedes enviar hasta 10 publicaciones cada 30 días.",
+  "That post was already sent.": "Esa publicación ya fue enviada.",
+  "Point transfers are turned off.": "Las transferencias de puntos están desactivadas.",
+  "You can't send points to yourself.": "No puedes enviarte puntos a ti mismo.",
+  "We couldn't find a verified Elma Resort account with that email.": "No encontramos una cuenta verificada de Elma Resort con ese email.",
+  "You've reached the transfer limit for the last 30 days.": "Llegaste al límite de transferencias de los últimos 30 días.",
+  "Please confirm the post tags @elmaresort and says you got points for it.": "Confirma que la publicación etiqueta a @elmaresort e indica que recibes puntos por ella.",
   "Within 24 hours of booking": "Dentro de las 24 horas de haber reservado",
   "More than 24 hours before check-in": "Más de 24 horas antes de la llegada",
   "Less than 24 hours before check-in": "Menos de 24 horas antes de la llegada",
@@ -128,6 +140,9 @@ const EXACT: Record<string, string> = {
 };
 
 const PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^The minimum transfer is (\d+) points\.$/, (m) => `La transferencia mínima es de ${m[1]} puntos.`],
+  [/^You have (\d+) points available\.$/, (m) => `Tienes ${m[1]} puntos disponibles.`],
+  [/^You can send (\d+) more points in the next 30 days\.$/, (m) => `Puedes enviar ${m[1]} puntos más en los próximos 30 días.`],
   [/^More than (\d+) days before check-in$/, (m) => `Más de ${m[1]} días antes de la llegada`],
   [/^Less than (\d+) days before check-in$/, (m) => `Menos de ${m[1]} días antes de la llegada`],
   [/^Between (\d+) and 7 days before check-in$/, (m) => `Entre ${m[1]} y 7 días antes de la llegada`],

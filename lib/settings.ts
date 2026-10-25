@@ -3,7 +3,40 @@ import { query } from "./db";
 import type { PublicSettings, Settings } from "./types";
 import { isPolicyId } from "./policy";
 import { DEFAULT_SMART } from "./smart-pricing";
-import type { SmartPricing } from "./types";
+import type { Loyalty, SmartPricing } from "./types";
+
+export const DEFAULT_LOYALTY: Loyalty = {
+  enabled: true,
+  pointsPerLike: 1,
+  pointsPerComment: 3,
+  centsPerPoint: 10,
+  maxPointsPerPost: 500,
+  maxDiscountPercent: 20,
+  expiryMonths: 12,
+  transferMin: 50,
+  transferMonthlyCap: 500,
+};
+
+export function validateLoyalty(raw: unknown): Loyalty {
+  if (!raw || typeof raw !== "object") return DEFAULT_LOYALTY;
+  const r = raw as Record<string, unknown>;
+  const n = (key: keyof Loyalty, label: string, min: number, max: number) => {
+    const v = Math.round(Number(r[key]));
+    if (!Number.isFinite(v) || v < min || v > max) throw new SettingsError(`${label} must be between ${min} and ${max}.`);
+    return v;
+  };
+  return {
+    enabled: Boolean(r.enabled),
+    pointsPerLike: n("pointsPerLike", "Points per like", 0, 100),
+    pointsPerComment: n("pointsPerComment", "Points per comment", 0, 100),
+    centsPerPoint: n("centsPerPoint", "Value of a point (cents)", 1, 100),
+    maxPointsPerPost: n("maxPointsPerPost", "Max points per post", 1, 100000),
+    maxDiscountPercent: n("maxDiscountPercent", "Max discount per booking", 1, 100),
+    expiryMonths: n("expiryMonths", "Points expire after (months)", 1, 60),
+    transferMin: n("transferMin", "Minimum transfer", 1, 100000),
+    transferMonthlyCap: n("transferMonthlyCap", "Monthly transfer cap", 0, 1000000),
+  };
+}
 
 /** Starting values. Everything here can be changed from /admin. */
 export const DEFAULT_SETTINGS: Settings = {
@@ -45,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mapCenter: "",
   mapZoom: 15,
   smartPricing: DEFAULT_SMART,
+  loyalty: DEFAULT_LOYALTY,
 };
 
 export class SettingsError extends Error {}
@@ -305,6 +339,7 @@ export function validateSettings(raw: unknown): Settings {
     mapCenter: latLng(input.mapCenter),
     mapZoom: int(input, "mapZoom", 11, 16),
     smartPricing: validateSmart(input.smartPricing),
+    loyalty: validateLoyalty(input.loyalty),
   };
   if (s.minNights > s.maxNights) throw new SettingsError("The minimum stay can't be longer than the longest stay.");
   if (s.monthlyMinNights <= s.weeklyMinNights) {

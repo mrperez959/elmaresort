@@ -68,7 +68,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 type TaxRow = { name: string; percent: string };
 
 type Form = Record<
-  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls" | "taxes" | "cancellationPolicy" | "smartPricing">,
+  Exclude<keyof Settings, "weekendNights" | "directDiscountEnabled" | "icalUrls" | "taxes" | "cancellationPolicy" | "smartPricing" | "loyalty">,
   string
 > & {
   weekendNights: number[];
@@ -79,6 +79,7 @@ type Form = Record<
   taxesConfigured: boolean;
   cancellationPolicy: Settings["cancellationPolicy"];
   smartPricing: Settings["smartPricing"];
+  loyalty: Settings["loyalty"];
 };
 
 // Names only: the rates depend on the county and must be confirmed by the owner.
@@ -93,7 +94,7 @@ const MONEY: Array<keyof Settings> = ["baseNightly", "cleaningFee", "petFee"];
 function toForm(s: Settings): Form {
   const f = {} as Record<string, unknown>;
   for (const [k, v] of Object.entries(s)) {
-    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy" || k === "smartPricing") f[k] = v;
+    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy" || k === "smartPricing" || k === "loyalty") f[k] = v;
     else if (k === "icalUrls") f[k] = (v as string[]).join("\n");
     else if (k === "taxes") {
       f.taxesConfigured = v !== null;
@@ -108,7 +109,7 @@ function toForm(s: Settings): Form {
 function fromForm(f: Form): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(f)) {
-    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy" || k === "smartPricing") out[k] = v;
+    if (k === "weekendNights" || k === "directDiscountEnabled" || k === "cancellationPolicy" || k === "smartPricing" || k === "loyalty") out[k] = v;
     else if (k === "taxesConfigured") continue;
     else if (
       [

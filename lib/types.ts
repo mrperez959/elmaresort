@@ -60,6 +60,7 @@ export type Settings = {
   maxNights: number;
   minNights: number;
   smartPricing: SmartPricing;
+  loyalty: Loyalty;
   /** Export (.ics) links from Airbnb, Vrbo, etc. Their busy dates block the site. */
   icalUrls: string[];
   /** Overall rating shown on the site, copied from the platform listing. */
@@ -113,6 +114,22 @@ export type PublicSettings = {
   checkOutHour: number;
 };
 
+/** Elma Points rules, editable in /admin/points. Money in cents. */
+export type Loyalty = {
+  enabled: boolean;
+  pointsPerLike: number;
+  pointsPerComment: number;
+  /** value of one point when redeemed, in cents (10 = 100 points are $10) */
+  centsPerPoint: number;
+  maxPointsPerPost: number;
+  /** points can pay at most this % of the nights */
+  maxDiscountPercent: number;
+  expiryMonths: number;
+  transferMin: number;
+  /** points a guest can send to others per 30 days */
+  transferMonthlyCap: number;
+};
+
 export type StayRequest = {
   checkIn: string;
   checkOut: string;
@@ -122,6 +139,8 @@ export type StayRequest = {
   pets: number;
   /** promo code typed by the guest */
   promo?: string;
+  /** Elma Points the guest wants to use (capped to the balance and the rules) */
+  points?: number;
 };
 
 /** A promo code as applied to one stay (frozen into the booking). */
@@ -141,6 +160,8 @@ export type Quote = StayRequest & {
   lengthDiscount: { label: string; percent: number; amount: number } | null;
   directDiscount: { percent: number; amount: number } | null;
   promoDiscount: (AppliedPromo & { amount: number }) | null;
+  /** Elma Points used on this stay */
+  pointsDiscount?: { points: number; amount: number } | null;
   /** nights after discounts */
   accommodation: number;
   cleaningFee: number;

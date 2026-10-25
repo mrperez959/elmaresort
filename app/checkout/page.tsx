@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { parseStayRequest, QuoteError } from "@/lib/quote";
 import { getSettings } from "@/lib/settings";
 import { getL } from "@/lib/lang-server";
+import { getBalance } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Confirm and pay" };
@@ -20,12 +21,23 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
   }
   if (stay.adults < 1) stay.adults = 1;
   const [user, settings, { l }] = await Promise.all([currentUser(), getSettings(), getL()]);
+  stay.points = undefined; // chosen on the page, never from the URL
+  const pointsAvailable =
+    user?.emailVerified && settings.loyalty.enabled ? (await getBalance(user.id).catch(() => null))?.available ?? 0 : 0;
 
   return (
     <main className="page">
       <SiteHeader user={user} showTagline={false} />
       <h1 className="checkout-title">{l("Confirm and pay", "Confirma y paga")}</h1>
-      <Checkout stay={stay} user={user} policy={settings.cancellationPolicy} checkInHour={settings.checkInHour} />
+      <Checkout
+        stay={stay}
+        user={user}
+        policy={settings.cancellationPolicy}
+        checkInHour={settings.checkInHour}
+        pointsAvailable={pointsAvailable}
+        centsPerPoint={settings.loyalty.centsPerPoint}
+        maxDiscountPercent={settings.loyalty.maxDiscountPercent}
+      />
     </main>
   );
 }

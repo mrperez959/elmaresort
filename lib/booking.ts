@@ -10,6 +10,7 @@ import { OVERLAP_ERROR } from "./db";
 import type { BookResult, PublicUser, Quote, StayRequest } from "./types";
 import { sendMail } from "./mail";
 import { sendBookingConfirmation } from "./emails";
+import { getBalance, holdPoints, bookingRedeemed, releasePoints } from "./points";
 
 const usd = (c: number) => `$${(c / 100).toFixed(2)}`;
 
@@ -91,10 +92,11 @@ const TAKEN: BookResult = {
  * feed (/calendar/<token>.ics), which they re-import every few hours.
  */
 export async function bookStay({ stay, guest, sourceId, idempotencyKey, expectedTotal, agreement }: BookInput): Promise<BookResult> {
-  // 1. Availability + price
+  // 1. Availability + price (points capped to the guest's current balance)
   let quote;
   try {
-    quote = await quoteStay(stay, { forBooking: true });
+    const maxPoints = stay.points ? (await getBalance(guest.id)).available : 0;
+    quote = await quoteStay(stay, { forBooking: true, maxPoints });
   } catch (err) {
     if (err instanceof QuoteError) return { state: "error", message: err.message };
     throw err;
@@ -103,6 +105,26 @@ export async function bookStay({ stay, guest, sourceId, idempotencyKey, expected
     return { state: "price_changed", message: "The total for these dates just changed. Review it and pay again.", quote };
   }
 
+  // 1b. Hold the points; released below if anything fails.
+  const pointsUsed = quote.pointsDiscount?.points ?? 0;
+  if (!(await holdPoints(guest.id, pointsUsed, idempotencyKey))) {
+    return { state: "price_changed", message: "Your points balance just changed. Review the total and pay again.", quote };
+  }
+  try {
+    const result = await authorizeSaveCapture(quote, { guest, sourceId, idempotencyKey, agreement });
+    if (result.state === "confirmed") await bookingRedeemed(idempotencyKey, result.code);
+    else await releasePoints(idempotencyKey);
+    return result;
+  } catch (err) {
+    await releasePoints(idempotencyKey).catch((e) => console.error("[booking] could not release points", e));
+    throw err;
+  }
+}
+
+async function authorizeSaveCapture(
+  quote: Quote,
+  { guest, sourceId, idempotencyKey, agreement }: Omit<BookInput, "stay" | "expectedTotal">,
+): Promise<BookResult> {
   // 2. Authorize
   let paymentId: string;
   try {

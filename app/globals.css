@@ -3098,3 +3098,192 @@ html {
     background: rgba(255, 255, 255, 0.12);
   }
 }
+
+/* ---------- Elma Points ---------- */
+
+.use-points {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--coral);
+  background: var(--coral-soft);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  color: var(--ink) !important;
+  cursor: pointer;
+}
+
+.use-points input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--navy);
+}
+
+.use-points span {
+  display: grid;
+  gap: 2px;
+}
+
+.use-points small {
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+}
+
+/* ---------- Elma Points (account) ---------- */
+
+.points {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 2px solid var(--ink);
+}
+
+.points-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.points-head h3 {
+  margin: 0;
+}
+
+.points-balance {
+  display: grid;
+  gap: 2px;
+  margin: 16px 0 24px;
+  padding: 18px 20px;
+  background: var(--ocean-soft);
+  border-radius: 6px;
+}
+
+.points-balance strong {
+  font-family: var(--display);
+  font-size: var(--display-2);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.points-balance small {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.points-grid {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 760px) {
+  .points-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.points-grid .guest-form {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.points-grid h4,
+.points > h4 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.points > h4 {
+  margin-top: 28px;
+}
+
+.pay.secondary {
+  background: var(--paper);
+  color: var(--navy);
+  border: 1px solid var(--navy);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pay.secondary:hover:not(:disabled) {
+    background: var(--mist);
+  }
+}
+
+.points-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.points-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.points-list a {
+  overflow-wrap: anywhere;
+}
+
+.points-list small {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+}
+
+.points-list .plus {
+  color: var(--ocean);
+  font-variant-numeric: tabular-nums;
+}
+
+.points-list .minus {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ---------- Elma Points (admin) ---------- */
+
+.post-reviews {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 2px solid var(--ink);
+}
+
+.post-review {
+  display: grid;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.post-review-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.post-review .admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.post-review .admin-actions .field-input {
+  flex: 1 1 220px;
+}
+
+.table-wrap + .admin-form {
+  margin-top: 28px;
+}

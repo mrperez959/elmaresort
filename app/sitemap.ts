@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 // Built per request so it always uses the current production domain.
 export const dynamic = "force-dynamic";
 
-const PAGES = ["/", "/house-rules", "/rental-agreement", "/refunds", "/privacy"];
+const PAGES = ["/", "/house-rules", "/rental-agreement", "/refunds", "/privacy", "/points"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;

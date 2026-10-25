@@ -157,6 +157,19 @@ Cada código tiene:
 - Si una reserva se cancela o se reembolsa en parte, la comisión baja en la misma proporción.
 - Si el huésped cambia las fechas, conserva el descuento de su código aunque el código ya haya vencido.
 
+## Elma Points (`/admin/points`)
+
+Programa de puntos por publicaciones en Instagram. Reglas públicas en `/points` (y `/es/points`).
+
+- **Quién gana:** solo huéspedes con una reserva confirmada cuya llegada ya pasó. Envían el enlace de su publicación desde `/account` y confirman que etiqueta a @elmaresort e indica que recibe puntos (#ad, exigido por la FTC).
+- **Revisión (por ahora manual):** te llega un email; en `/admin/points` abres la publicación, escribes likes y comentarios, y apruebas (o rechazas con un motivo que ve el huésped). El huésped recibe un email en su idioma.
+- **Valores por defecto (editables en "Rules"):** 1 punto por like, 3 por comentario, máx. 500 por publicación; 100 puntos = $10; máx. 20% de las noches por reserva; vencen a los 12 meses.
+- **Transferencias:** a otra cuenta con email confirmado, mínimo 50 y máximo 500 puntos cada 30 días. No se pueden deshacer.
+- **Al pagar:** "Use my Elma Points" aplica los puntos después de los demás descuentos. Los puntos se reservan antes de cobrar la tarjeta, así no se pueden gastar dos veces. Si el pago falla, vuelven.
+- **Cancelaciones y cambios:** al cancelar vuelven todos los puntos usados; al cambiar el viaje, vuelven los que el nuevo total no necesite.
+- **Ajustes manuales:** suma o resta puntos a cualquier cuenta por email (regalos, correcciones).
+- **Más adelante:** verificación automática con la API de Instagram (requiere revisión de la app por Meta).
+
 ## Métricas (`/admin/analytics`)
 
 La analítica es propia: los datos se guardan en tu misma base de datos, sin Google Analytics, sin cookies de terceros y sin guardar direcciones IP. El panel muestra:

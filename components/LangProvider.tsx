@@ -30,7 +30,7 @@ export function LangToggle() {
         document.cookie = `${LANG_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
         // Public pages have their own address per language (/ and /es/...).
         const base = pathname === "/es" ? "/" : pathname.startsWith("/es/") ? pathname.slice(3) : pathname;
-        const isPublic = ["/", "/house-rules", "/rental-agreement", "/refunds", "/privacy"].includes(base);
+        const isPublic = ["/", "/house-rules", "/rental-agreement", "/refunds", "/privacy", "/points"].includes(base);
         if (isPublic) {
           const target = next === "es" ? (base === "/" ? "/es" : `/es${base}`) : base;
           router.push(`${target}${window.location.search}`);

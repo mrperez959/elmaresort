@@ -87,6 +87,9 @@ export function SiteFooter({ name, email, phone, whatsapp, instagram, facebook }
           <p>
             <Link href="/privacy">{l("Privacy policy", "Política de privacidad")}</Link>
           </p>
+          <p>
+            <Link href="/points">Elma Points</Link>
+          </p>
         </nav>
       </div>
     </footer>

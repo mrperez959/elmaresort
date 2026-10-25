@@ -7,6 +7,7 @@ import { getSettings } from "./settings";
 import { quoteStay, QuoteError } from "./quote";
 import { cancellationRefund, isPolicyId, zonedInstant, type PolicyId, type Refund } from "./policy";
 import type { Quote, StayRequest } from "./types";
+import { restorePoints } from "./points";
 
 export type Trip = {
   id: string;
@@ -114,6 +115,13 @@ export async function cancelTrip(t: Trip, { full = false } = {}): Promise<{ refu
     [t.id],
   );
   if (!rows.length) throw new TripError("This trip is already cancelled.");
+  // Elma Points used on the trip always come back when it's cancelled.
+  const pts = t.quote.pointsDiscount?.points ?? 0;
+  if (pts > 0) {
+    await restorePoints(t.userId, pts, t.code, `Cancelled ${t.code}`).catch((e) =>
+      console.error(`[trips] could not restore points for ${t.code}`, e),
+    );
+  }
   if (amount > 0) {
     try {
       await refundToCard(t.id, amount, `Cancellation of ${t.code}`);
@@ -138,12 +146,18 @@ export type ChangePreview = {
 export async function previewChange(t: Trip, stay: StayRequest): Promise<ChangePreview> {
   if (!canChange(t)) throw new TripError("This trip can't be changed online anymore. Contact us.");
   const pd = t.quote.promoDiscount;
-  const next = await quoteStay(stay, {
-    forBooking: true,
-    replacing: { id: t.id, start: t.quote.checkIn, end: t.quote.checkOut },
-    // The promo code the guest booked with stays on the trip, even if the code has expired since.
-    frozenPromo: pd ? { code: pd.code, percent: pd.percent, commissionPercent: pd.commissionPercent } : null,
-  });
+  // Points already used stay on the trip (never more); any the new stay can't use come back.
+  const usedPoints = t.quote.pointsDiscount?.points ?? 0;
+  const next = await quoteStay(
+    { ...stay, points: usedPoints || undefined },
+    {
+      forBooking: true,
+      replacing: { id: t.id, start: t.quote.checkIn, end: t.quote.checkOut },
+      // The promo code the guest booked with stays on the trip, even if the code has expired since.
+      frozenPromo: pd ? { code: pd.code, percent: pd.percent, commissionPercent: pd.commissionPercent } : null,
+      maxPoints: usedPoints,
+    },
+  );
   const cur = t.quote;
   const up = next.total - cur.total;
   if (up >= 0) {
@@ -240,7 +254,14 @@ export async function applyChange(
       "INSERT INTO payments (booking_id, square_payment_id, amount_cents, kind) VALUES ($1, $2, $3, 'change')",
       [t.id, paymentId, preview.difference],
     );
-  } else if (preview.difference < 0) {
+  }
+  const unused = (t.quote.pointsDiscount?.points ?? 0) - (q.pointsDiscount?.points ?? 0);
+  if (unused > 0) {
+    await restorePoints(t.userId, unused, t.code, `Change to ${t.code}`).catch((e) =>
+      console.error(`[trips] could not restore points for ${t.code}`, e),
+    );
+  }
+  if (!paymentId && preview.difference < 0) {
     try {
       await refundToCard(t.id, -preview.difference, `Change to ${t.code}`);
     } catch (err) {
